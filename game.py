@@ -360,9 +360,9 @@ while not done:
         click_left = True
     if pg.mouse.get_pressed()[0] == False:
         click_left = False
-    if pg.mouse.get_pressed()[1] == True:
+    if pg.mouse.get_pressed()[2] == True:
         click_right = True
-    if pg.mouse.get_pressed()[1] == False:
+    if pg.mouse.get_pressed()[2] == False:
         click_right = False    
 
     mouse_x, mouse_y = pg.mouse.get_pos()
