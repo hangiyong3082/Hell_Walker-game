@@ -12,7 +12,7 @@ black = (0,0,0)
 
 clock = pg.time.Clock()
 done = False
-
+a= 0
 def file_path(relative_path):  #파일경로
     try:
         base_path = sys._MEIPASS
@@ -34,14 +34,14 @@ mouse_x, mouse_y = pg.mouse.get_pos()
 weapon = 1
 special_weapon = False
     #총
-firegun_time = 10
+firegun_time = 60
     #칼
 knife_atteck_term = 120
 knife_atteck_timelong = 10
     #좀비(근접)
-zombie_melee_spawntime = 20
+zombie_melee_spawntime = 120
 zombie_melee_crash_player_time = 60
-crash_Zm_time = 20 # while문에서 실행
+crash_Zm_time = 20
 
 #플레이어
 class Player(pg.sprite.Sprite):
@@ -53,16 +53,12 @@ class Player(pg.sprite.Sprite):
         self.x = screen_width/2-self.width/2
         self.y = screen_height/2-self.height/2 
         self.health = 10
-        self.speed = 3
+        self.speed = 2.7
         self.sprites = []
-
-    def update(self):
-        self.centerx = self.x + self.width/2
-        self.centery = self.y + self.height/2
-        self.rect.topleft = (self.centerx,self.centery)
-        screen.blit(self.img,[self.x,self.y])
-        if self.health <= 0: #사망
-            print("die")
+        #히트박스
+        self.hitbox = pg.image.load(os.path.join(assets,'player_hitbox.png'))
+        self.h_rect = self.hitbox.get_rect()
+        self.h_width,self.h_height = self.hitbox.get_size()
 
     def move(self):
         if press_left == False and press_right == False:
@@ -86,6 +82,23 @@ class Player(pg.sprite.Sprite):
         if self.x > screen_width-self.width:self.x -= self.speed
         if self.y < 0:self.y += self.speed
         if self.y > screen_height-self.height:self.y -= self.speed
+    def die(self):
+        if self.health <= 0:
+            print("die")
+    
+    def update(self):
+        self.centerx = self.x + self.width/2
+        self.centery = self.y + self.height/2
+        self.rect.topleft = (self.x,self.y)
+        screen.blit(self.img,[self.x,self.y])
+        #히트박스
+        self.h_x = self.x + (self.width-self.h_width)/2
+        self.h_y = self.y + (self.height-self.h_height)/2
+        self.h_rect.topleft = (self.centerx,self.centery)
+        #screen.blit(self.hitbox,[self.h_x,self.h_y])
+
+        self.move()
+        self.die()
 #공격 방향 표시
 class Atteck_dir():
     def __init__(self):
@@ -137,7 +150,7 @@ class Bullet():
         self.atteck()
         self.x = atteck_dir.x
         self.y = atteck_dir.y
-        if self.fire_term == 0 and weapon == 0:
+        if self.fire_term == 0 and weapon == 0 and special_weapon == False:
             self.angle = math.atan2(mouse_y-player.centery, mouse_x-player.centerx)
             self.degree = math.degrees(self.angle)*-1
             self.dx = 0 #math.cos(self.angle)*self.speed
@@ -257,15 +270,19 @@ class Zombie_melee():
             b_index = 0
             a_index += 1
     def atteck(self):
+        global a
         for Zmp in self.list:
             Zmp_rect = self.img.get_rect()
             Zmp_rect.topleft = (Zmp[0],Zmp[1])
-            if Zmp_rect.colliderect(player.rect):
+            if Zmp_rect.colliderect(player.h_rect):
                 if Zmp[6] == 0:
                     player.health -= 1
                     Zmp[6] = zombie_melee_crash_player_time
-                    print("damaged")
+                    a += 1
+                    print("damaged %d"%a)
                 Zmp[6] -= 1
+            else:
+                Zmp[6] = 0
     
     def die(self):
         for Zm in self.list:
@@ -292,7 +309,6 @@ class Zombie_melee():
             
     #게임
 def Game():
-    player.move()
     player.update()
     atteck_dir.update()
     target_mouse.update()
@@ -334,7 +350,7 @@ while not done:
                 special_weapon = False
             if event.key == pg.K_2:
                 weapon = 1
-                special_weapon = False
+                special_weapon = False     
             if event.key == pg.K_g:
                 special_weapon = True
             
@@ -367,7 +383,7 @@ while not done:
 
     mouse_x, mouse_y = pg.mouse.get_pos()
     
-    print(knife.atteck_term)
+    #print(knife.atteck_term)
     Game() 
 
     pg.display.flip()
