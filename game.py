@@ -190,7 +190,7 @@ class Knife():
         if self.atteck_term > 0:
             self.atteck_term -= 1
 
-        if click_left == True and self.atteck_term == 0 and weapon == 1:
+        if click_left == True and self.atteck_term == 0 and weapon == 1 and special_weapon == False:
             self.atteck = True
             self.atteck_timelong = knife_atteck_timelong
             self.atteck_term = knife_atteck_term
