@@ -41,7 +41,10 @@ knife_atteck_timelong = 10
     #좀비(근접)
 zombie_melee_spawntime = 120
 zombie_melee_crash_player_time = 60
-crash_Zm_time = 20
+crash_Zm_time = 0
+crash_Zm_time_ = crash_Zm_time
+    #좀비(원거리)
+zombie_shoot_spawntime = 240
 
 #플레이어
 class Player(pg.sprite.Sprite):
@@ -228,6 +231,12 @@ class Zombie_melee():
         self.crash_player_time = 0
         self.list = []
         self.spawntime = zombie_melee_spawntime
+        self.x , self.y = 0,0
+        #크래시박스
+        self.crashbox = pg.image.load(os.path.join(assets,'zombie_1_crashbox.png'))
+        self.c_rect = self.crashbox.get_rect()
+        self.c_width,self.h_height = self.crashbox.get_size()
+
     def spawn(self):
         if self.spawntime == 0:
             first_random = random.randint(1,4)
@@ -254,8 +263,9 @@ class Zombie_melee():
             self.spawntime = zombie_melee_spawntime
         self.spawntime -= 1
    
-    def atteck(self):
+    def Atteck_Die(self):
         global a
+        #atteck
         for Zmp in self.list:
             Zmp_rect = self.img.get_rect()
             Zmp_rect.topleft = (Zmp[0],Zmp[1])
@@ -268,23 +278,40 @@ class Zombie_melee():
                 Zmp[6] -= 1
             else:
                 Zmp[6] = 0
-    
-    def die(self):
+            #die
+            if Zmp[5] <= 0:
+                self.list.remove(Zmp)
+    def Move_Draw(self):
         for Zm in self.list:
-            if Zm[5] <= 0:
-                self.list.remove(Zm)
-    def update(self):
-        zombie_melee.spawn()
-        zombie_melee.atteck()  
-        self.die()
-        
-        for Zm in self.list:
+            #move
             Zm[0] += Zm[2] 
             Zm[1] += Zm[3]
             Zm[4] = math.atan2(player.y-Zm[1],player.x-Zm[0])
             Zm[2] = math.cos(Zm[4])*self.speed
             Zm[3] = math.sin(Zm[4])*self.speed
+            #draw
             screen.blit(self.img,(Zm[0],Zm[1]))
+
+    def update(self):
+        self.spawn()
+        self.Atteck_Die() 
+        self.Move_Draw()
+
+        self.c_x = self.x + (self.width-self.c_width)/2
+        self.c_y = self.y + (self.height-self.h_height)/2
+        self.c_rect.topleft = (self.c_x,self.c_y)
+        #screen.blit(self.hitbox,[self.h_x,self.h_y])
+        
+class Zombie_shoot():
+    def __init__(self):
+        self.img = pg.image.load(os.path.join(assets,'zombie_2.png'))
+        self.width, self.height = self.img.get_size()
+        self.rect = self.img.get_rect()
+        self.speed = 2
+        self.health = 1
+        self.crash_player_time = 0
+        self.list = []
+        self.spawntime = zombie_shoot_spawntime
             
 def Crash_Zombie(zm):
         a_index, b_index = 0,0
@@ -292,18 +319,20 @@ def Crash_Zombie(zm):
             #여기에 원거리 공격 좀비 추가
             for Zm2 in zm.list:
                 if a_index < b_index:
-                    Zm1_rect,Zm2_rect = zm.img.get_rect(), zm.img.get_rect()
+                    Zm1_rect,Zm2_rect = zm.crashbox.get_rect(), zm.crashbox.get_rect()
                     Zm1_rect.topleft,Zm2_rect.topleft = (Zm1[0],Zm1[1]), (Zm2[0],Zm2[1])
                     if Zm1_rect.colliderect(Zm2_rect):
-                        Zm1_angle = math.atan2(Zm1[1]-Zm2[1],Zm1[0]-Zm1[0])
-                        Zm1[2] = math.cos(Zm1_angle)*zm.speed
-                        Zm1[3] = math.sin(Zm1_angle)*zm.speed
-                        Zm2[2] = -Zm1[2]
-                        Zm2[3] = -Zm1[3]                   
+                        Zm1_angle = math.atan2(Zm1[1]-Zm2[1],Zm1[0]-Zm1[0]) #math.cos또는sin(Zm1_angle)*zm.speed
+                        if math.dist((Zm1[0],Zm1[1]),(player.x , player.y)) \
+                            < math.dist((Zm2[0],Zm2[1]),(player.x , player.y)):
+                            Zm2[2] = -math.cos(Zm1_angle)*zm.speed
+                            Zm2[3] = -math.sin(Zm1_angle)*zm.speed                  
+                        else: 
+                            Zm1[2]= math.cos(Zm1_angle)*zm.speed
+                            Zm1[3]= math.cos(Zm1_angle)*zm.speed
                 b_index += 1
             b_index = 0
-            a_index += 1 
-            
+            a_index += 1   
     #게임
 def Game():
     player.update()
@@ -314,7 +343,6 @@ def Game():
     knife.update()
 
     zombie_melee.update()
-    Crash_Zombie(zombie_melee)
 
 #클래스 설정   
 player = Player()
@@ -382,10 +410,10 @@ while not done:
     mouse_x, mouse_y = pg.mouse.get_pos()
 
     #충돌 방지 유효 시간 조정
-    if crash_Zm_time == 0:
+    if crash_Zm_time_ <= 0:
         Crash_Zombie(zombie_melee)
-        crash_Zm_time = 3
-    crash_Zm_time -= 1  
+        crash_Zm_time_ = crash_Zm_time
+   # crash_Zm_time_ -= 1  
     
     #print(knife.atteck_term)
     Game() 
