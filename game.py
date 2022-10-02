@@ -6,7 +6,8 @@ pg.init()
 #기본 세팅
 screen_width = 1200
 screen_height = 700
-screen = pg.display.set_mode([screen_width,screen_height])
+UIbar_height = 150
+screen = pg.display.set_mode([screen_width,screen_height+UIbar_height])
 pg.display.set_caption("Hell Walker")
 
 black = (0,0,0)
@@ -37,6 +38,7 @@ firegun_time = 40
     #칼
 knife_atteck_term = 120
 knife_atteck_timelong = 10
+knife_cooltime = 0
     #좀비(근접)
 zombie_melee_spawntime = 80
 zombie_melee_crash_player_time = 60
@@ -58,7 +60,7 @@ class Player(pg.sprite.Sprite):
         self.rect = self.img.get_rect()
         self.width,self.height = self.img.get_size()
         self.x = screen_width/2-self.width/2
-        self.y = screen_height/2-self.height/2 
+        self.y = screen_height/2-self.height/2+UIbar_height
         self.health = 10
         self.speed = 2.7
         self.sprites = []
@@ -87,8 +89,8 @@ class Player(pg.sprite.Sprite):
         #벽에 닿았을 때
         if self.x < 0:self.x += self.speed
         if self.x > screen_width-self.width:self.x -= self.speed
-        if self.y < 0:self.y += self.speed
-        if self.y > screen_height-self.height:self.y -= self.speed
+        if self.y < UIbar_height:self.y += self.speed
+        if self.y > screen_height+UIbar_height-self.height:self.y -= self.speed
     def die(self):
         if self.health <= 0:
             print("die")
@@ -180,7 +182,7 @@ class Bullet():
         for B in self.list:
             if B[0] >= screen_width or B[0] <= -self.width:
                 self.list.remove(B)
-            elif B[1] >= screen_height or B[1] <= -self.height:
+            elif B[1] >= screen_height+UIbar_height or B[1] <= -self.height+UIbar_height:
                 self.list.remove(B)         
         for B in self.list:
             B[5] += self.speed_increase
@@ -189,7 +191,7 @@ class Bullet():
             B[0] += B[2]
             B[1] += B[3]
             screen.blit(self.img,(B[0],B[1]))
-        if weapon == 0:
+        if weapon == 0 and special_weapon == False:
             self.fire_term -= 1
         else:
             self.fire_term = firegun_time
@@ -201,6 +203,7 @@ class Knife():
         self.img = pg.image.load(os.path.join(assets,'knife_hitbox.png'))
         self.width, self.height = self.img.get_size()
         self.atteck_term = 0
+        self.cooltime = 0
         self.atteck_timelong = knife_atteck_timelong
         self.atteck = False
 
@@ -268,16 +271,16 @@ class Zombie_melee():
             first_random = random.randint(1,4)
             if first_random == 1:
                 x_pos = random.randint(0,screen_width-self.width)
-                y_pos = -self.height       
+                y_pos = -self.height+UIbar_height       
             elif first_random == 2:
                 x_pos = random.randint(0,screen_width-self.width)
-                y_pos = screen_height       
+                y_pos = screen_height+UIbar_height       
             elif first_random == 3:
                 x_pos = -self.width
-                y_pos = random.randint(0,screen_height-self.height)
+                y_pos = random.randint(UIbar_height,screen_height-self.height)
             elif first_random == 4:
                 x_pos = screen_width
-                y_pos = random.randint(0,screen_height-self.height)
+                y_pos = random.randint(UIbar_height,screen_height-self.height)
             self.x = x_pos
             self.y = y_pos
             self.angle = 0
@@ -301,9 +304,8 @@ class Zombie_melee():
                     Zmp[6] = zombie_melee_crash_player_time
                     a += 1
                     print("damaged %d"%a)
+            if Zmp[6] != 0:
                 Zmp[6] -= 1
-            else:
-                Zmp[6] = 0
             #die
             if Zmp[5] <= 0:
                 self.list.remove(Zmp)
@@ -328,6 +330,7 @@ class Zombie_melee():
         self.c_rect.topleft = (self.c_x,self.c_y)
         #screen.blit(self.hitbox,[self.h_x,self.h_y])
         
+#좀비(원거리)
 class Zombie_shoot():
     def __init__(self):
         #zombie
@@ -338,6 +341,7 @@ class Zombie_shoot():
         self.health = 1
         self.list = []
         self.bullet = []
+        self.crash = False
         self.spawntime = zombie_shoot_spawntime
         self.x, self.y = 0,0
         #bullet
@@ -352,35 +356,36 @@ class Zombie_shoot():
             first_random = random.randint(1,4)
             if first_random == 1:
                 x_pos = random.randint(0,screen_width-self.width)
-                y_pos = -self.height       
+                y_pos = -self.height+UIbar_height       
             elif first_random == 2:
                 x_pos = random.randint(0,screen_width-self.width)
-                y_pos = screen_height       
+                y_pos = screen_height+UIbar_height       
             elif first_random == 3:
                 x_pos = -self.width
-                y_pos = random.randint(0,screen_height-self.height)
+                y_pos = random.randint(UIbar_height,screen_height+UIbar_height-self.height)
             elif first_random == 4:
                 x_pos = screen_width
-                y_pos = random.randint(0,screen_height-self.height)
+                y_pos = random.randint(UIbar_height,screen_height+UIbar_height-self.height)
             self.x = x_pos
             self.y = y_pos
             self.angle = 0
             self.dx = 0
             self.dy = 0
-            self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,self.bullet,self.shooting_time])
-                            # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] bullet[6] shooting_time[7]
+            self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,self.bullet,self.shooting_time,self.crash])
+                            # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] bullet[6] shooting_time[7] crash[8]
             self.spawntime = zombie_shoot_spawntime
         self.spawntime -= 1
 
     def Basic(self):
         for Zs in self.list:
-            Zs[4] = math.atan2(player.y-Zs[1],player.x-Zs[0])
-            Zs[2] = math.cos(Zs[4])*self.speed
-            Zs[3] = math.sin(Zs[4])*self.speed
             #move 
-            if not 100 <= Zs[0] <= screen_width-100 - self.width or not 100 <= Zs[1] <= screen_height-100 - self.height:
+            if not 100 <= Zs[0] <= screen_width-100 - self.width or \
+                not 100+UIbar_height <= Zs[1] <= screen_height+UIbar_height-100 - self.height:
                 Zs[0] += Zs[2] 
                 Zs[1] += Zs[3]
+            Zs[4] = math.atan2(player.y-Zs[1],player.x-Zs[0])
+            Zs[2] = math.cos(Zs[4])*self.speed
+            Zs[3] = math.sin(Zs[4])*self.speed          
             #spawn bullet
             if Zs[7] == 0:
                 self.b_x = Zs[0] + (self.width - self.b_width)/2
@@ -402,7 +407,7 @@ class Zombie_shoot():
             self.b_rect.topleft = Zb[0], Zb[1]
             if Zb[0] >= screen_width or Zb[0] <= -self.b_width:
                 self.bullet.remove(Zb)
-            elif Zb[1] >= screen_width or Zb[1] <= -self.b_width:
+            elif Zb[1] >= screen_width+UIbar_height or Zb[1] <= -self.b_width+UIbar_height:
                 self.bullet.remove(Zb)
             #move
             Zb[0]+=Zb[2]
@@ -420,10 +425,9 @@ class Zombie_shoot():
         self.Basic()
         self.Bullet()
 
-def Crash_Zombie(zm):
+def Crash_Zombie(zm,zs):
         a_index, b_index = 0,0
         for Zm1 in zm.list:
-            #여기에 원거리 공격 좀비 추가
             for Zm2 in zm.list:
                 if a_index < b_index:
                     Zm1_rect,Zm2_rect = zm.crashbox.get_rect(), zm.crashbox.get_rect()
@@ -439,7 +443,27 @@ def Crash_Zombie(zm):
                             Zm1[3]= math.cos(Zm1_angle)*zm.speed
                 b_index += 1
             b_index = 0
-            a_index += 1   
+            a_index += 1 
+        a_index, b_index = 0,0  
+        for Zs1 in zs.list:
+            for Zs2 in zs.list:
+                if a_index < b_index:
+                    Zs1_rect,Zs2_rect = zs.img.get_rect(), zs.img.get_rect()
+                    Zs1_rect.topleft,Zs2_rect.topleft = (Zs1[0],Zs1[1]), (Zs2[0],Zs2[1])
+                    if Zs1_rect.colliderect(Zs2_rect):
+                        Zs1[8],Zs2[8] = True,True
+                        Zm1_angle = math.atan2(Zs1[1]-Zm2[1],Zs1[0]-Zs1[0]) #math.cos또는sin(Zm1_angle)*zm.speed
+                        if math.dist((Zs1[0],Zs1[1]),(player.x , player.y)) \
+                            < math.dist((Zs2[0],Zs2[1]),(player.x , player.y)):
+                            Zs2[2] = 0
+                            Zs2[3] = 0
+                            Zs1[2] = 0
+                            Zs1[3] = 0                 
+                    else:
+                        Zs1[8],Zs2[8] = False,False
+                b_index += 1
+            b_index = 0
+            a_index += 1 
     #게임
 def Game():
     player.update()
@@ -453,17 +477,28 @@ def Game():
 
     zombie_shoot.update()
 
+    #UI바
+    pg.draw.rect(screen,(0,0,0),[0,0,screen_width,UIbar_height],0)
+    pg.draw.rect(screen,(255,80,199),[0,0,screen_width,UIbar_height],3)
     #체력
-    font1 = pg.font.SysFont('휴먼매직체', 50, False, True)
-    text = font1.render(f"체력 : {player.health}", True, (255,72,199))
-    screen.blit(text, (screen_width/2-(text.get_rect())[2]/2,50))
+    font_health = pg.font.SysFont('한컴산뜻돋움', 50, False, False)
+    text_health = font_health.render(f"체력 : {player.health}", True, (255,72,199))
+    screen.blit(text_health, (screen_width/2-(text_health.get_rect())[2]/2,50))
+    #칼 쿨타임
+    font_k_cooltime = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
+    text_k_cooltime = font_k_cooltime.render(f"칼 쿨타임 : {knife.atteck_term/60:0.2f}", True, (255,72,199))
+    screen.blit(text_k_cooltime, (800,50))
+    #점수
+    font_score = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
+    text_score = font_score.render(f"점수 : {score}", True, (255,255,255))
+    screen.blit(text_score, (220,50))
 
 def GameOver():
     if player.health <= 0:
         screen.fill(black)
-        font1 = pg.font.SysFont('휴먼매직체', 50, False, True)
-        text = font1.render(f"점수 : {score}", True, (255,72,199))
-        screen.blit(text, (screen_width/2-(text.get_rect())[2]/2,screen_height/2-(text.get_rect())[1]))
+        font_score = pg.font.SysFont('휴먼매직체', 50, False, True)
+        text_score = font_score.render(f"점수 : {score}", True, (255,72,199))
+        screen.blit(text_score, (screen_width/2-(text_score.get_rect())[2]/2,screen_height/2-(text_score.get_rect())[1]/2))
 
 #클래스 설정   
 player = Player()
@@ -539,7 +574,7 @@ while not done:
         Time -= 1
         Game() 
     GameOver()
-    Crash_Zombie(zombie_melee)
+    Crash_Zombie(zombie_melee,zombie_shoot)
 
     pg.display.flip()
     clock.tick(60)
