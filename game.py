@@ -1,4 +1,3 @@
-from sqlite3 import Time
 import pygame as pg, os, time, random, math, sys
 
 pg.init()
@@ -157,15 +156,13 @@ class Bullet():
                     try:
                         self.list.remove(B)
                     except:pass
-                    score += 100
             for Zs in zombie_shoot.list:  #zombie_shoot
                 zombie_shoot.rect.topleft = (Zs[0],Zs[1])
                 if zombie_shoot.rect.colliderect(self.rect):
                     Zs[5] -= 1
                     try:
                         self.list.remove(B)
-                    except:pass
-                    score += 100
+                    except:pass              
             
     def update(self):
         self.atteck()
@@ -293,7 +290,7 @@ class Zombie_melee():
         self.spawntime -= 1
    
     def Atteck_Die(self):
-        global a
+        global score
         #atteck
         for Zmp in self.list:
             Zmp_rect = self.img.get_rect()
@@ -301,14 +298,13 @@ class Zombie_melee():
             if Zmp_rect.colliderect(player.h_rect):
                 if Zmp[6] == 0:
                     player.health -= 1
-                    Zmp[6] = zombie_melee_crash_player_time
-                    a += 1
-                    print("damaged %d"%a)
+                    Zmp[6] = zombie_melee_crash_player_time                
             if Zmp[6] != 0:
                 Zmp[6] -= 1
             #die
             if Zmp[5] <= 0:
                 self.list.remove(Zmp)
+                score += 100
     def Move_Draw(self):
         for Zm in self.list:
             #move
@@ -377,6 +373,7 @@ class Zombie_shoot():
         self.spawntime -= 1
 
     def Basic(self):
+        global score
         for Zs in self.list:
             #move 
             if not 100 <= Zs[0] <= screen_width-100 - self.width or \
@@ -398,6 +395,7 @@ class Zombie_shoot():
             #die
             if Zs[5] <= 0:
                 self.list.remove(Zs)
+                score += 100
             #draw
         for Zs in self.list:
             screen.blit(self.img,(Zs[0],Zs[1]))
@@ -452,7 +450,7 @@ def Crash_Zombie(zm,zs):
                     Zs1_rect.topleft,Zs2_rect.topleft = (Zs1[0],Zs1[1]), (Zs2[0],Zs2[1])
                     if Zs1_rect.colliderect(Zs2_rect):
                         Zs1[8],Zs2[8] = True,True
-                        Zm1_angle = math.atan2(Zs1[1]-Zm2[1],Zs1[0]-Zs1[0]) #math.cos또는sin(Zm1_angle)*zm.speed
+                        #Zm1_angle = math.atan2(Zs1[1]-Zm2[1],Zs1[0]-Zs1[0]) #math.cos또는sin(Zm1_angle)*zm.speed
                         if math.dist((Zs1[0],Zs1[1]),(player.x , player.y)) \
                             < math.dist((Zs2[0],Zs2[1]),(player.x , player.y)):
                             Zs2[2] = 0
