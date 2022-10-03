@@ -33,7 +33,7 @@ click_left, click_right = False,False
 weapon = 1
 special_weapon = False
     #총
-firegun_time = 10
+firegun_time = 60
     #칼
 knife_atteck_term = 120
 knife_atteck_timelong = 10
