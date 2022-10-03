@@ -524,14 +524,14 @@ def Wave():
     global wave, wave_time, wave_killzombie, wave_fontalpha, zm_spawn, zs_spawn, zm_count, zs_count\
         ,zombie_melee_spawntime, zombie_shoot_spawntime
     
-    if wave_time == 0 or wave_killzombie == (zm_spawn + zs_spawn)//1:
+    if wave_time == 0 or wave_killzombie == zm_spawn//1 + zs_spawn//1:
         wave += 1
         wave_time = 3600
         wave_fontalpha = 200
         wave_killzombie = 0
 
-        zm_spawn += 1
-        zs_spawn += 0.7
+        zm_spawn += 1.5
+        zs_spawn += 0.8
         zm_count = zm_spawn
         zs_count = zs_spawn
 
@@ -542,7 +542,7 @@ def Wave():
         wave_fontalpha -= 2.3
 
         #웨이브 알림
-        font_wave = pg.font.SysFont('한컴산뜻돋움',150, False, False)
+        font_wave = pg.font.SysFont('Times new Roman',150, True, False)
         textsurface = font_wave.render(f"WAVE {wave}", True, (255,80,199))
         surface = pg.Surface((textsurface.get_rect()[2], textsurface.get_rect()[3]))
         surface.fill(black)
