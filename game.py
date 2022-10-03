@@ -53,8 +53,10 @@ Time = 60
     #스폰 수
 zm_spawn = 4
 zs_spawn = 1
-zm_count = zm_spawn
-zs_count = zs_spawn
+zm_spawncount = zm_spawn
+zs_spawncount = zs_spawn
+    #남은 좀비 수
+Z_left = 0
     #웨이브
 wave = 0
 wave_time = 0
@@ -274,8 +276,8 @@ class Zombie_melee():
         self.c_width,self.h_height = self.crashbox.get_size()
 
     def spawn(self):
-        global zm_count
-        if zm_count//1 > 0:
+        global zm_spawncount
+        if zm_spawncount//1 > 0:
             if self.spawntime <= 0:
                 first_random = random.randint(1,4)
                 if first_random == 1:
@@ -299,14 +301,14 @@ class Zombie_melee():
                                     self.crash_player_time])
                                 # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] crash_player_time[6]
                 self.spawntime = zombie_melee_spawntime
-                zm_count -= 1
-
+                zm_spawncount -= 1
+                
                 #만약 무한모드라면
                 '''zm_count += 1'''
         self.spawntime -= 1
 
     def Atteck_Die(self):
-        global score, wave_killzombie
+        global score, wave_killzombie,Z_left
         #atteck
         for Zmp in self.list:
             Zmp_rect = self.img.get_rect()
@@ -322,6 +324,7 @@ class Zombie_melee():
                 self.list.remove(Zmp)
                 score += 100
                 wave_killzombie += 1
+                Z_left -= 1
     def Move_Draw(self):
         for Zm in self.list:
             #move
@@ -365,8 +368,8 @@ class Zombie_shoot():
         self.shooting_time = zombie_shoot_shooting_time
 
     def spawn(self):
-        global zs_count
-        if zs_count//1 >0:
+        global zs_spawncount
+        if zs_spawncount//1 >0:
             if self.spawntime <= 0:
                 first_random = random.randint(1,4)
                 if first_random == 1:
@@ -389,14 +392,13 @@ class Zombie_shoot():
                 self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,self.bullet,self.shooting_time,self.crash])
                                 # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] bullet[6] shooting_time[7] crash[8]
                 self.spawntime = zombie_shoot_spawntime
-                zs_count -= 1
-
+                zs_spawncount -= 1                
                 #만약 무한모드라면
                 '''zs_count += 1'''
         self.spawntime -= 1
 
     def Basic(self):
-        global score, wave_killzombie
+        global score, wave_killzombie,Z_left
         for Zs in self.list:
             #move 
             if not 100 <= Zs[0] <= screen_width-100 - self.width or \
@@ -420,6 +422,7 @@ class Zombie_shoot():
                 self.list.remove(Zs)
                 score += 100
                 wave_killzombie += 1
+                Z_left -= 1
             #draw
         for Zs in self.list:
             screen.blit(self.img,(Zs[0],Zs[1]))
@@ -521,10 +524,10 @@ def Game():
     screen.blit(text_wavetime, (screen_width/2-(text_wavetime.get_rect())[2]/2,20))
 
 def Wave():
-    global wave, wave_time, wave_killzombie, wave_fontalpha, zm_spawn, zs_spawn, zm_count, zs_count\
-        ,zombie_melee_spawntime, zombie_shoot_spawntime
+    global wave, wave_time, wave_killzombie, wave_fontalpha, zm_spawn, zs_spawn, zm_spawncount, zs_spawncount\
+        ,zombie_melee_spawntime, zombie_shoot_spawntime, Z_left
     
-    if wave_time == 0 or wave_killzombie == zm_spawn//1 + zs_spawn//1:
+    if wave_time == 0 or Z_left == 0:
         wave += 1
         wave_time = 3600
         wave_fontalpha = 200
@@ -532,11 +535,13 @@ def Wave():
 
         zm_spawn += 1.5
         zs_spawn += 0.8
-        zm_count = zm_spawn
-        zs_count = zs_spawn
+        zm_spawncount = zm_spawn
+        zs_spawncount = zs_spawn
 
         zombie_melee.spawntime = zombie_melee_spawntime
         zombie_shoot.spawntime = zombie_shoot_spawntime
+
+        Z_left += zm_spawn//1 + zs_spawn//1
 
     if wave_fontalpha >0:
         wave_fontalpha -= 2.3
@@ -635,9 +640,10 @@ while not done:
         Game() 
     GameOver()
     Crash_Zombie(zombie_melee,zombie_shoot)
-    print(wave_killzombie, end=' ')
-    print(zm_count,end=' ')
-    print(zs_count)
+    '''print(wave_killzombie, end=' ')
+    print(zm_spawncount,end=' ')
+    print(zs_spawncount)'''
+    print(Z_left)
 
     pg.display.flip()
     clock.tick(60)
