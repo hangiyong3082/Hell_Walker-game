@@ -33,23 +33,33 @@ click_left, click_right = False,False
 weapon = 1
 special_weapon = False
     #총
-firegun_time = 40
+firegun_time = 60
     #칼
 knife_atteck_term = 120
 knife_atteck_timelong = 10
 knife_cooltime = 0
     #좀비(근접)
-zombie_melee_spawntime = 80
+zombie_melee_spawntime = 90
 zombie_melee_crash_player_time = 60
 crash_Zm_time = 0
 crash_Zm_time_ = crash_Zm_time
     #좀비(원거리)
 zombie_shoot_spawntime = 160
 zombie_shoot_shooting_time = 110
-    #점수
+    #전체 점수
 score = 0
-    #시간
+    #시간제 점수 시간
 Time = 60
+    #스폰 수
+zm_spawn = 4
+zs_spawn = 1
+zm_count = zm_spawn
+zs_count = zs_spawn
+    #웨이브
+wave = 0
+wave_time = 0
+wave_killzombie = 0
+wave_fontalpha = 200
 
 #플레이어
 class Player(pg.sprite.Sprite):
@@ -264,33 +274,39 @@ class Zombie_melee():
         self.c_width,self.h_height = self.crashbox.get_size()
 
     def spawn(self):
-        if self.spawntime == 0:
-            first_random = random.randint(1,4)
-            if first_random == 1:
-                x_pos = random.randint(0,screen_width-self.width)
-                y_pos = -self.height+UIbar_height       
-            elif first_random == 2:
-                x_pos = random.randint(0,screen_width-self.width)
-                y_pos = screen_height+UIbar_height       
-            elif first_random == 3:
-                x_pos = -self.width
-                y_pos = random.randint(UIbar_height,screen_height-self.height)
-            elif first_random == 4:
-                x_pos = screen_width
-                y_pos = random.randint(UIbar_height,screen_height-self.height)
-            self.x = x_pos
-            self.y = y_pos
-            self.angle = 0
-            self.dx = 0
-            self.dy = 0
-            self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,
-                                self.crash_player_time])
-                            # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] crash_player_time[6]
-            self.spawntime = zombie_melee_spawntime
+        global zm_count
+        if zm_count//1 > 0:
+            if self.spawntime <= 0:
+                first_random = random.randint(1,4)
+                if first_random == 1:
+                    x_pos = random.randint(0,screen_width-self.width)
+                    y_pos = -self.height+UIbar_height       
+                elif first_random == 2:
+                    x_pos = random.randint(0,screen_width-self.width)
+                    y_pos = screen_height+UIbar_height       
+                elif first_random == 3:
+                    x_pos = -self.width
+                    y_pos = random.randint(UIbar_height,screen_height-self.height)
+                elif first_random == 4:
+                    x_pos = screen_width
+                    y_pos = random.randint(UIbar_height,screen_height-self.height)
+                self.x = x_pos
+                self.y = y_pos
+                self.angle = 0
+                self.dx = 0
+                self.dy = 0
+                self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,
+                                    self.crash_player_time])
+                                # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] crash_player_time[6]
+                self.spawntime = zombie_melee_spawntime
+                zm_count -= 1
+
+                #만약 무한모드라면
+                '''zm_count += 1'''
         self.spawntime -= 1
-   
+
     def Atteck_Die(self):
-        global score
+        global score, wave_killzombie
         #atteck
         for Zmp in self.list:
             Zmp_rect = self.img.get_rect()
@@ -305,6 +321,7 @@ class Zombie_melee():
             if Zmp[5] <= 0:
                 self.list.remove(Zmp)
                 score += 100
+                wave_killzombie += 1
     def Move_Draw(self):
         for Zm in self.list:
             #move
@@ -348,32 +365,38 @@ class Zombie_shoot():
         self.shooting_time = zombie_shoot_shooting_time
 
     def spawn(self):
-        if self.spawntime == 0:
-            first_random = random.randint(1,4)
-            if first_random == 1:
-                x_pos = random.randint(0,screen_width-self.width)
-                y_pos = -self.height+UIbar_height       
-            elif first_random == 2:
-                x_pos = random.randint(0,screen_width-self.width)
-                y_pos = screen_height+UIbar_height       
-            elif first_random == 3:
-                x_pos = -self.width
-                y_pos = random.randint(UIbar_height,screen_height+UIbar_height-self.height)
-            elif first_random == 4:
-                x_pos = screen_width
-                y_pos = random.randint(UIbar_height,screen_height+UIbar_height-self.height)
-            self.x = x_pos
-            self.y = y_pos
-            self.angle = 0
-            self.dx = 0
-            self.dy = 0
-            self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,self.bullet,self.shooting_time,self.crash])
-                            # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] bullet[6] shooting_time[7] crash[8]
-            self.spawntime = zombie_shoot_spawntime
+        global zs_count
+        if zs_count//1 >0:
+            if self.spawntime <= 0:
+                first_random = random.randint(1,4)
+                if first_random == 1:
+                    x_pos = random.randint(0,screen_width-self.width)
+                    y_pos = -self.height+UIbar_height       
+                elif first_random == 2:
+                    x_pos = random.randint(0,screen_width-self.width)
+                    y_pos = screen_height+UIbar_height       
+                elif first_random == 3:
+                    x_pos = -self.width
+                    y_pos = random.randint(UIbar_height,screen_height+UIbar_height-self.height)
+                elif first_random == 4:
+                    x_pos = screen_width
+                    y_pos = random.randint(UIbar_height,screen_height+UIbar_height-self.height)
+                self.x = x_pos
+                self.y = y_pos
+                self.angle = 0
+                self.dx = 0
+                self.dy = 0
+                self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,self.bullet,self.shooting_time,self.crash])
+                                # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] bullet[6] shooting_time[7] crash[8]
+                self.spawntime = zombie_shoot_spawntime
+                zs_count -= 1
+
+                #만약 무한모드라면
+                '''zs_count += 1'''
         self.spawntime -= 1
 
     def Basic(self):
-        global score
+        global score, wave_killzombie
         for Zs in self.list:
             #move 
             if not 100 <= Zs[0] <= screen_width-100 - self.width or \
@@ -396,6 +419,7 @@ class Zombie_shoot():
             if Zs[5] <= 0:
                 self.list.remove(Zs)
                 score += 100
+                wave_killzombie += 1
             #draw
         for Zs in self.list:
             screen.blit(self.img,(Zs[0],Zs[1]))
@@ -464,6 +488,7 @@ def Crash_Zombie(zm,zs):
             a_index += 1 
     #게임
 def Game():
+    global wave_time
     player.update()
     atteck_dir.update()
     target_mouse.update()
@@ -490,13 +515,50 @@ def Game():
     font_score = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
     text_score = font_score.render(f"점수 : {score}", True, (255,255,255))
     screen.blit(text_score, (220,50))
+    #웨이브 시간
+    font_wavetime = pg.font.SysFont('한컴산뜻돋움', 20, False, False)
+    text_wavetime = font_wavetime.render(f"웨이브 시간 {wave_time//60}", True, (255,255,255))
+    screen.blit(text_wavetime, (screen_width/2-(text_wavetime.get_rect())[2]/2,20))
+
+def Wave():
+    global wave, wave_time, wave_killzombie, wave_fontalpha, zm_spawn, zs_spawn, zm_count, zs_count\
+        ,zombie_melee_spawntime, zombie_shoot_spawntime
+    
+    if wave_time == 0 or wave_killzombie == (zm_spawn + zs_spawn)//1:
+        wave += 1
+        wave_time = 3600
+        wave_fontalpha = 200
+        wave_killzombie = 0
+
+        zm_spawn += 1
+        zs_spawn += 0.7
+        zm_count = zm_spawn
+        zs_count = zs_spawn
+
+        zombie_melee.spawntime = zombie_melee_spawntime
+        zombie_shoot.spawntime = zombie_shoot_spawntime
+
+    if wave_fontalpha >0:
+        wave_fontalpha -= 2.3
+
+        #웨이브 알림
+        font_wave = pg.font.SysFont('한컴산뜻돋움',150, False, False)
+        textsurface = font_wave.render(f"WAVE {wave}", True, (255,80,199))
+        surface = pg.Surface((textsurface.get_rect()[2], textsurface.get_rect()[3]))
+        surface.fill(black)
+        surface.blit(textsurface, pg.Rect(0, 0, 10, 10))
+        surface.set_alpha(wave_fontalpha)
+        screen.blit(surface,(screen_width/2-(surface.get_rect())[2]/2,screen_height/2-(surface.get_rect())[1]/2))
+
+    wave_time -= 1
 
 def GameOver():
     if player.health <= 0:
         screen.fill(black)
         font_score = pg.font.SysFont('휴먼매직체', 50, False, True)
         text_score = font_score.render(f"점수 : {score}", True, (255,72,199))
-        screen.blit(text_score, (screen_width/2-(text_score.get_rect())[2]/2,screen_height/2-(text_score.get_rect())[1]/2))
+        screen.blit(text_score, (screen_width/2-(text_score.get_rect())[2]/2,\
+            screen_height/2-(text_score.get_rect())[3]/2+UIbar_height/2))
 
 #클래스 설정   
 player = Player()
@@ -564,7 +626,7 @@ while not done:
 
     mouse_x, mouse_y = pg.mouse.get_pos()
 
-    #print(knife.atteck_term)
+    Wave()
     if not player.health <= 0:
         if Time <= 0:
             score += 10
@@ -573,6 +635,9 @@ while not done:
         Game() 
     GameOver()
     Crash_Zombie(zombie_melee,zombie_shoot)
+    print(wave_killzombie, end=' ')
+    print(zm_count,end=' ')
+    print(zs_count)
 
     pg.display.flip()
     clock.tick(60)
