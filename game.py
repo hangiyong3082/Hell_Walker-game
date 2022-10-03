@@ -33,7 +33,7 @@ click_left, click_right = False,False
 weapon = 1
 special_weapon = False
     #총
-firegun_time = 60
+firegun_time = 10
     #칼
 knife_atteck_term = 120
 knife_atteck_timelong = 10
@@ -276,7 +276,7 @@ class Zombie_melee():
         self.c_width,self.h_height = self.crashbox.get_size()
 
     def spawn(self):
-        global zm_spawncount
+        global zm_spawncount,zm_spawn
         if zm_spawncount//1 > 0:
             if self.spawntime <= 0:
                 first_random = random.randint(1,4)
@@ -300,7 +300,7 @@ class Zombie_melee():
                 self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,
                                     self.crash_player_time])
                                 # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] crash_player_time[6]
-                self.spawntime = zombie_melee_spawntime
+                self.spawntime = 1000//zm_spawn
                 zm_spawncount -= 1
                 
                 #만약 무한모드라면
@@ -368,7 +368,7 @@ class Zombie_shoot():
         self.shooting_time = zombie_shoot_shooting_time
 
     def spawn(self):
-        global zs_spawncount
+        global zs_spawncount,zs_spawn
         if zs_spawncount//1 >0:
             if self.spawntime <= 0:
                 first_random = random.randint(1,4)
@@ -391,7 +391,7 @@ class Zombie_shoot():
                 self.dy = 0
                 self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,self.bullet,self.shooting_time,self.crash])
                                 # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] bullet[6] shooting_time[7] crash[8]
-                self.spawntime = zombie_shoot_spawntime
+                self.spawntime = 1000//zs_spawn
                 zs_spawncount -= 1                
                 #만약 무한모드라면
                 '''zs_count += 1'''
@@ -514,10 +514,14 @@ def Game():
     font_k_cooltime = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
     text_k_cooltime = font_k_cooltime.render(f"칼 쿨타임 : {knife.atteck_term/60:0.2f}", True, (255,72,199))
     screen.blit(text_k_cooltime, (800,50))
+    #웨이브
+    font_score = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
+    text_score = font_score.render(f"wave : {wave}", True, (255,100,199))
+    screen.blit(text_score, (220,30))
     #점수
     font_score = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
     text_score = font_score.render(f"점수 : {score}", True, (255,255,255))
-    screen.blit(text_score, (220,50))
+    screen.blit(text_score, (220,80))
     #웨이브 시간
     font_wavetime = pg.font.SysFont('한컴산뜻돋움', 20, False, False)
     text_wavetime = font_wavetime.render(f"웨이브 시간 {wave_time//60}", True, (255,255,255))
@@ -525,7 +529,7 @@ def Game():
 
 def Wave():
     global wave, wave_time, wave_killzombie, wave_fontalpha, zm_spawn, zs_spawn, zm_spawncount, zs_spawncount\
-        ,zombie_melee_spawntime, zombie_shoot_spawntime, Z_left
+        ,zombie_melee_spawntime, zombie_shoot_spawntime, Z_left,zombie_melee_spawntime,zombie_shoot_spawntime
     
     if wave_time == 0 or Z_left == 0:
         wave += 1
@@ -538,10 +542,10 @@ def Wave():
         zm_spawncount = zm_spawn
         zs_spawncount = zs_spawn
 
-        zombie_melee.spawntime = zombie_melee_spawntime
-        zombie_shoot.spawntime = zombie_shoot_spawntime
-
         Z_left += zm_spawn//1 + zs_spawn//1
+
+        zombie_melee.spawntime = 1000//zm_spawn
+        zombie_shoot.spawntime = 1000//zs_spawn
 
     if wave_fontalpha >0:
         wave_fontalpha -= 2.3
@@ -560,10 +564,14 @@ def Wave():
 def GameOver():
     if player.health <= 0:
         screen.fill(black)
+        font_totalwave = pg.font.SysFont('휴먼매직체', 70, False, False)
+        text_totalwave = font_totalwave.render(f"wave : {wave}", True, (255,72,199))
+        screen.blit(text_totalwave, (screen_width/2-(text_totalwave.get_rect())[2]/2,\
+            screen_height/2-(text_totalwave.get_rect())[3]/2+UIbar_height/2-70))
         font_score = pg.font.SysFont('휴먼매직체', 50, False, True)
-        text_score = font_score.render(f"점수 : {score}", True, (255,72,199))
+        text_score = font_score.render(f"점수 : {score}", True, (255,255,255))
         screen.blit(text_score, (screen_width/2-(text_score.get_rect())[2]/2,\
-            screen_height/2-(text_score.get_rect())[3]/2+UIbar_height/2))
+            screen_height/2-(text_score.get_rect())[3]/2+UIbar_height/2+30))
 
 #클래스 설정   
 player = Player()
