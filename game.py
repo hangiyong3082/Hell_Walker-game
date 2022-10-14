@@ -53,6 +53,8 @@ Time = 60
     #스폰 수
 zm_spawn = 4
 zs_spawn = 1
+zm_spawn_startval = zm_spawn
+zs_spawn_startval = zs_spawn
 zm_spawncount = zm_spawn
 zs_spawncount = zs_spawn
     #남은 좀비 수
@@ -62,6 +64,10 @@ wave = 0
 wave_time = 0
 wave_killzombie = 0
 wave_fontalpha = 200
+    #수류탄
+special_weapon_click = 1
+special_weapon_availabletime = 0
+special_weapon_have = 2
 
 #플레이어
 class Player(pg.sprite.Sprite):
@@ -144,7 +150,7 @@ class Target_mouse():
     def update(self):
         if special_weapon == True:
             pg.mouse.set_visible(False)
-            screen.blit(self.img, [mouse_x-self.width/2,mouse_y-self.height/2])
+            screen.blit(self.img, [mouse_x-self.width/2,mouse_y-self.height/2])            
         else:
             pg.mouse.set_visible(True)
 #총알
@@ -256,8 +262,90 @@ class Knife():
             self.x, self.y = None, None
         
     def update(self):
-        self.Atteck()       
+        self.Atteck()   
+
+#특수무기(수류탄)-------------------------------------------------------------------------------------------------
+class Bomb():
+    def __init__(self):
+        self.img = pg.image.load(os.path.join(assets,'bomb.png'))
+        self.img.set_colorkey((255,255,255))     
+        self.width, self.height = self.img.get_size()   
+        self.f_img = pg.image.load(os.path.join(assets,'fallingpos.png'))  
+        self.f_img.set_colorkey((0,0,0)) 
+        self.fallingpos = []
+        self.bomblist = []
+        self.explode = []
+        self.explode_draw = []
+        #히트박스
+        self.e_img = pg.image.load(os.path.join(assets,'explode.png'))
+        self.h_img = pg.image.load(os.path.join(assets,'explode_hitbox.png'))
+        self.e_width, self.e_height = self.e_img.get_size()   
+        self.rect = self.e_img.get_rect()
+
+    def falling(self):
+        global special_weapon_click,special_weapon_availabletime,special_weapon_have
+        #떨어지는 모션
+        if special_weapon == True:
+            if click_left == True and special_weapon_click == 1 and special_weapon_availabletime == 0\
+                and special_weapon_have > 0:
+                special_weapon_click = 0    
+                special_weapon_availabletime = 30              
+                self.fallingpos.append([mouse_x,mouse_y])
+                self.bomblist.append([mouse_x,UIbar_height-self.height-10,0]) #x[0] y[1] degree[2]   
+                special_weapon_have -= 1
+        #사용가능 시간 간격
+        if special_weapon_availabletime > 0:
+            special_weapon_availabletime -= 1 
+        #메인
+        for f in self.fallingpos:
+            self.bomblist[self.fallingpos.index(f)][1] += 10
+            screen.blit(self.f_img,(f[0]-self.f_img.get_size()[0]/2,f[1]-self.f_img.get_size()[1]/2))
+
+            if f[1]-self.height <= self.bomblist[self.fallingpos.index(f)][1]:
+                self.bomblist.remove(self.bomblist[self.fallingpos.index(f)])
+                self.explode.append([f[0]-self.e_width//2,f[1]-self.e_height//2])
+                self.explode_draw.append([f[0]-self.e_width//2,f[1]-self.e_height//2,7])
+                self.fallingpos.remove(f)  
+
+                self.damage(zombie_melee,zombie_shoot)
+
+                self.explode.clear()
         
+    def draw(self):
+        for b in self.bomblist: #수류탄
+            b[2] += 2
+            result = pg.transform.rotate(self.img,b[2])
+            screen.blit(result,(b[0]-self.width//2,b[1]))
+
+        for ed in self.explode_draw: #폭발
+            screen.blit(self.e_img,(ed[0],ed[1]))
+            if ed[2] <= 0:
+                self.explode_draw.remove(ed)
+            ed[2] -= 1
+    
+    def damage(self,zm,zs):
+        global Z_left, score  
+        for e in self.explode:
+            self.rect.topleft = e[0],e[1]
+            for i in range(0,5):
+                for m in zm.list:
+                    zm.rect.topleft = m[0],m[1]
+                    if zm.rect.colliderect(self.rect):
+                        zm.list.remove(m)
+                        Z_left -= 1   
+                        score += 100
+            for i in range(0,5):
+                for s in zs.list:
+                    zs.rect.topleft = s[0],s[1]
+                    if zs.rect.colliderect(self.rect):
+                        zs.list.remove(s)
+                        Z_left -= 1 
+                        score += 100 
+        
+    def update(self):
+        self.falling()
+        self.draw()
+
 #좀비(근접)
 class Zombie_melee():
     def __init__(self):
@@ -339,7 +427,7 @@ class Zombie_melee():
     def update(self):
         self.spawn()
         self.Atteck_Die() 
-        self.Move_Draw()
+        self.Move_Draw() 
 
         self.c_x = self.x + (self.width-self.c_width)/2
         self.c_y = self.y + (self.height-self.h_height)/2
@@ -503,6 +591,8 @@ def Game():
 
     zombie_shoot.update()
 
+    bomb.update()
+
     #UI바
     pg.draw.rect(screen,(0,0,0),[0,0,screen_width,UIbar_height],0)
     pg.draw.rect(screen,(255,80,199),[0,0,screen_width,UIbar_height],3)
@@ -512,11 +602,15 @@ def Game():
     screen.blit(text_health, (screen_width/2-(text_health.get_rect())[2]/2,50))
     #칼 쿨타임
     font_k_cooltime = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
-    text_k_cooltime = font_k_cooltime.render(f"칼 쿨타임 : {knife.atteck_term/60:0.2f}", True, (255,72,199))
-    screen.blit(text_k_cooltime, (800,50))
+    text_k_cooltime = font_k_cooltime.render(f"칼 쿨타임 : {knife.atteck_term/60:0.2f}", True, (255,120,199))
+    screen.blit(text_k_cooltime, (800,30))
+    #수류탄 개수
+    font_bomb = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
+    text_bomb = font_bomb.render(f"수류탄 개수 : {special_weapon_have}", True, (255,97,166))
+    screen.blit(text_bomb, (800,75))
     #웨이브
     font_score = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
-    text_score = font_score.render(f"wave : {wave}", True, (255,100,199))
+    text_score = font_score.render(f"wave : {wave}", True, (255,36,163))
     screen.blit(text_score, (220,30))
     #점수
     font_score = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
@@ -529,7 +623,8 @@ def Game():
 
 def Wave():
     global wave, wave_time, wave_killzombie, wave_fontalpha, zm_spawn, zs_spawn, zm_spawncount, zs_spawncount\
-        ,zombie_melee_spawntime, zombie_shoot_spawntime, Z_left,zombie_melee_spawntime,zombie_shoot_spawntime
+        ,zombie_melee_spawntime, zombie_shoot_spawntime, Z_left,zombie_melee_spawntime,zombie_shoot_spawntime\
+        , zm_spawn_startval, zs_spawn_startval
     
     if wave_time == 0 or Z_left == 0:
         wave += 1
@@ -537,8 +632,8 @@ def Wave():
         wave_fontalpha = 200
         wave_killzombie = 0
 
-        zm_spawn += 1.5
-        zs_spawn += 0.8
+        zm_spawn = zm_spawn_startval + 1.3*wave
+        zs_spawn = zs_spawn_startval + 0.55*wave
         zm_spawncount = zm_spawn
         zs_spawncount = zs_spawn
 
@@ -562,6 +657,7 @@ def Wave():
     wave_time -= 1
 
 def GameOver():
+    global special_weapon
     if player.health <= 0:
         screen.fill(black)
         font_totalwave = pg.font.SysFont('휴먼매직체', 70, False, False)
@@ -572,6 +668,7 @@ def GameOver():
         text_score = font_score.render(f"점수 : {score}", True, (255,255,255))
         screen.blit(text_score, (screen_width/2-(text_score.get_rect())[2]/2,\
             screen_height/2-(text_score.get_rect())[3]/2+UIbar_height/2+30))
+        pg.mouse.set_visible(True)
 
 #클래스 설정   
 player = Player()
@@ -581,6 +678,7 @@ bullet = Bullet()
 knife = Knife()
 zombie_melee = Zombie_melee()
 zombie_shoot = Zombie_shoot()
+bomb = Bomb()
 
 while not done:
     screen.fill(black)
@@ -632,6 +730,7 @@ while not done:
         click_left = True
     if pg.mouse.get_pressed()[0] == False:
         click_left = False
+        special_weapon_click = 1
     if pg.mouse.get_pressed()[2] == True:
         click_right = True
     if pg.mouse.get_pressed()[2] == False:
@@ -648,11 +747,7 @@ while not done:
         Game() 
     GameOver()
     Crash_Zombie(zombie_melee,zombie_shoot)
-    '''print(wave_killzombie, end=' ')
-    print(zm_spawncount,end=' ')
-    print(zs_spawncount)'''
-    print(Z_left)
-
+    
     pg.display.flip()
     clock.tick(60)
 pg.quit()
