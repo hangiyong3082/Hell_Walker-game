@@ -60,16 +60,16 @@ zs_spawncount = zs_spawn
     #남은 좀비 수
 Z_left = 0
     #웨이브
-wave = 0
+wave = 10
 wave_time = 0
 wave_killzombie = 0
 wave_fontalpha = 200
     #수류탄
 special_weapon_click = 1
 special_weapon_availabletime = 0
-special_weapon_have = 2
+special_weapon_have = 3
 
-#플레이어
+#플d레이어
 class Player(pg.sprite.Sprite):
     def __init__(self):
         super(Player,self).__init__()
@@ -277,11 +277,22 @@ class Bomb():
         self.explode = []
         self.explode_draw = []
         #히트박스
-        self.e_img = pg.image.load(os.path.join(assets,'explode.png'))
         self.h_img = pg.image.load(os.path.join(assets,'explode_hitbox.png'))
-        self.e_width, self.e_height = self.e_img.get_size()   
-        self.rect = self.e_img.get_rect()
-
+        self.h_img.set_colorkey((255,255,255))
+        self.h_width, self.h_height = self.h_img.get_size()   
+        self.rect = self.h_img.get_rect()
+        #폭발 모션
+        self.e_img = []
+        self.e_img.append(pg.image.load(os.path.join(assets,'explode_1.png')))
+        self.e_img.append(pg.image.load(os.path.join(assets,'explode_2.png')))
+        self.e_img.append(pg.image.load(os.path.join(assets,'explode_3.png')))
+        self.e_img.append(pg.image.load(os.path.join(assets,'explode_4.png')))
+        self.e_img[0].set_colorkey((255,255,255))
+        self.e_img[1].set_colorkey((255,255,255))
+        self.e_img[2].set_colorkey((255,255,255))
+        self.e_img[3].set_colorkey((255,255,255))
+        self.e_currenttime = 0
+        
     def falling(self):
         global special_weapon_click,special_weapon_availabletime,special_weapon_have
         #떨어지는 모션
@@ -298,13 +309,14 @@ class Bomb():
             special_weapon_availabletime -= 1 
         #메인
         for f in self.fallingpos:
-            self.bomblist[self.fallingpos.index(f)][1] += 10
+            self.bomblist[self.fallingpos.index(f)][1] += 15
             screen.blit(self.f_img,(f[0]-self.f_img.get_size()[0]/2,f[1]-self.f_img.get_size()[1]/2))
 
             if f[1]-self.height <= self.bomblist[self.fallingpos.index(f)][1]:
                 self.bomblist.remove(self.bomblist[self.fallingpos.index(f)])
-                self.explode.append([f[0]-self.e_width//2,f[1]-self.e_height//2])
-                self.explode_draw.append([f[0]-self.e_width//2,f[1]-self.e_height//2,7])
+                self.explode.append([f[0]-self.h_width//2,f[1]-self.h_height//2])
+                self.explode_draw.append([f[0]-self.h_width//2,f[1]-self.h_height//2,12,0,3,-1])
+                                        #x[0], y[1], 폭발모션시간[2], 에니메이션 1장당 시간[3], [3]의 초기값[4], 애니메이션 사진[5]
                 self.fallingpos.remove(f)  
 
                 self.damage(zombie_melee,zombie_shoot)
@@ -318,10 +330,18 @@ class Bomb():
             screen.blit(result,(b[0]-self.width//2,b[1]))
 
         for ed in self.explode_draw: #폭발
-            screen.blit(self.e_img,(ed[0],ed[1]))
             if ed[2] <= 0:
                 self.explode_draw.remove(ed)
+                print('end')
+                break
+            if ed[3] <= 0:
+                ed[5] += 1
+                ed[3] = ed[4]
+                print(f'{ed[5]}  {ed[2]} {ed[3]}')
+            screen.blit(self.e_img[ed[5]],(ed[0],ed[1]))
             ed[2] -= 1
+            ed[3] -= 1
+            
     
     def damage(self,zm,zs):
         global Z_left, score  
@@ -614,7 +634,7 @@ def Game():
     screen.blit(text_score, (220,30))
     #점수
     font_score = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
-    text_score = font_score.render(f"점수 : {score}", True, (255,255,255))
+    text_score = font_score.render(f"점수 : {score}", True, (110,227,247))
     screen.blit(text_score, (220,80))
     #웨이브 시간
     font_wavetime = pg.font.SysFont('한컴산뜻돋움', 20, False, False)
