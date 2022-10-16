@@ -967,9 +967,14 @@ class Upgrade():
                 screen.blit(text_ug_des, (middle_font_x,middle_font_y)) 
 
                 font_ug_level = pg.font.SysFont('한컴산뜻돋움', 15, False, False)
-                text_ug_level = font_ug_level.render(f"{self.upgrade_list[self.card[cd_index]][1]}", True, (255,255,255))
+                text_ug_level = font_ug_level.render(f"{self.upgrade_list[self.card[cd_index]][1]}", True, (0,216,255))
                 screen.blit(text_ug_level, (middle_font_x+(text_ug_des.get_size()[0]-text_ug_level.get_size()[0])/2,middle_font_y+30)) 
+
+                font_detail_des = pg.font.SysFont('한컴산뜻돋움', 25, False, True)
+                text_detail_des = font_detail_des.render("최고 레벨인 카드를 선택할 시 수류탄 +1", True, (166,166,166))
+                screen.blit(text_detail_des, ((screen_width-text_detail_des.get_size()[0])/2,500+UIbar_height)) 
             except:pass
+            
     
     def sound(self,volume):
         if between_wave == 0 and self.card_appear == True:
