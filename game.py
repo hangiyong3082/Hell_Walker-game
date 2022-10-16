@@ -34,9 +34,11 @@ click_left, click_right = False,False
 weapon = 1
 special_weapon = False
     #총
-firegun_time = 60
+firegun_time_startval = 60
+firegun_time = firegun_time_startval
     #칼
-knife_atteck_term = 120
+knife_atteck_term_startval = 120
+knife_atteck_term = knife_atteck_term_startval
 knife_atteck_timelong = 10
 knife_cooltime = 0
 knife_increase_size = 0
@@ -73,10 +75,13 @@ special_weapon_click = 1
 special_weapon_availabletime = 0
 special_weapon_have = 3
     #최대체력
-max_health = 5.0
+max_health = 5
     #업그레이드
 DoingUpgrade = False
 card_num = random.randint(2,3)
+    #사운드
+volume_modify_max = 10
+volume_modify = 5
 
 #플레이어
 class Player(pg.sprite.Sprite):
@@ -202,17 +207,17 @@ class Bullet():
         for B in self.list:
             screen.blit(self.img,(B[0],B[1]))
 
-    def sound(self):
-        if self.fire_term == 0 and weapon == 0 and special_weapon == False:
+    def sound(self,volume):
+        if self.fire_term <= 0 and weapon == 0 and special_weapon == False:
             gun_sound = pg.mixer.Sound(os.path.join(assets,'gun_sound.wav'))
-            pg.mixer.Sound.set_volume(gun_sound, 0.1)
+            pg.mixer.Sound.set_volume(gun_sound, volume)
             gun_sound.play()
 
     def update(self):
         self.atteck()
         self.x = atteck_dir.x
         self.y = atteck_dir.y
-        if self.fire_term == 0 and weapon == 0 and special_weapon == False:
+        if self.fire_term <= 0 and weapon == 0 and special_weapon == False:
             self.angle = math.atan2(mouse_y-player.centery, mouse_x-player.centerx)
             self.degree = math.degrees(self.angle)*-1
             self.dx = 0 #math.cos(self.angle)*self.speed
@@ -246,6 +251,7 @@ class Knife():
         self.cooltime = 0
         self.atteck_timelong = knife_atteck_timelong
         self.atteck = False
+        self.swing = False #사운드용
 
     def Atteck(self):
         global score,knife_increase_size
@@ -260,6 +266,8 @@ class Knife():
             self.atteck = True
             self.atteck_timelong = knife_atteck_timelong
             self.atteck_term = knife_atteck_term
+
+            self.swing = True #사운드용
             
         if self.atteck == True and self.atteck_timelong > 0:
             self.atteck_timelong -= 1
@@ -293,6 +301,13 @@ class Knife():
         if self.atteck == True and self.atteck_timelong > 0:
             screen.blit(self.img,(self.x, self.y))
 
+    def sound(self,volume):
+        if self.atteck == True and self.atteck_timelong > 0 and self.swing == True:
+            knife_sound = pg.mixer.Sound(os.path.join(assets,'knife_sound.wav'))
+            pg.mixer.Sound.set_volume(knife_sound, volume)
+            knife_sound.play()
+            self.swing = False
+
     def update(self):
         self.Atteck()   
 
@@ -308,6 +323,7 @@ class Bomb():
         self.bomblist = []
         self.explode = []
         self.explode_draw = []
+        self.bomb_arrive = False #사운드용
         #히트박스
         self.h_img = pg.image.load(os.path.join(assets,'explode_hitbox.png'))
         self.h_img.set_colorkey((255,255,255))
@@ -353,6 +369,8 @@ class Bomb():
                 self.damage(zombie_melee,zombie_shoot)
 
                 self.explode.clear()
+
+                self.bomb_arrive = True
         
     def draw(self):
         for f in self.fallingpos: #도착 지점
@@ -392,6 +410,13 @@ class Bomb():
                         zs.list.remove(s)
                         Z_left -= 1 
                         score += 100 
+
+    def sound(self,volume):
+        if self.bomb_arrive:
+            bomb_sound = pg.mixer.Sound(os.path.join(assets,'bomb_sound.wav'))
+            pg.mixer.Sound.set_volume(bomb_sound, volume)
+            bomb_sound.play()
+            self.bomb_arrive = False
         
     def update(self):
         self.falling()
@@ -409,6 +434,7 @@ class Zombie_melee():
         self.list = []
         self.spawntime = zombie_melee_spawntime
         self.x , self.y = 0,0
+        self.die = False #사운드용
         #크래시박스
         self.crashbox = pg.image.load(os.path.join(assets,'zombie_1_crashbox.png'))
         self.c_rect = self.crashbox.get_rect()
@@ -461,6 +487,7 @@ class Zombie_melee():
                 Zmp[6] -= 1
             #die
             if Zmp[5] <= 0:
+                self.die = True
                 self.list.remove(Zmp)
                 score += 100
                 wave_killzombie += 1
@@ -480,6 +507,13 @@ class Zombie_melee():
                 screen.blit(self.img_Lflip,(Zm[0],Zm[1]))
             else:
                 screen.blit(self.img,(Zm[0],Zm[1]))
+
+    def sound(self,volume):
+        if self.die:
+            zombie_die_sound = pg.mixer.Sound(os.path.join(assets,'zombie_die_sound.wav'))
+            pg.mixer.Sound.set_volume(zombie_die_sound, volume)
+            zombie_die_sound.play()
+            self.die = False
 
     def update(self):
         self.spawn()
@@ -505,6 +539,7 @@ class Zombie_shoot():
         self.crash = False
         self.spawntime = zombie_shoot_spawntime
         self.x, self.y = 0,0
+        self.die = False #사운드용
         #bullet
         self.b_img = pg.image.load(os.path.join(assets,'zombie_bullet.png'))
         self.b_rect = self.b_img.get_rect()
@@ -564,6 +599,7 @@ class Zombie_shoot():
             Zs[7] -= 1
             #die
             if Zs[5] <= 0:
+                self.die = True
                 self.list.remove(Zs)
                 score += 100
                 wave_killzombie += 1
@@ -590,6 +626,18 @@ class Zombie_shoot():
 
         for Zb in self.bullet:
             screen.blit(self.b_img,(Zb[0],Zb[1]))
+
+    def sound(self,volume):
+        for Zs in self.list:
+            if Zs[7] == 0:
+                zombie_bullet_sound = pg.mixer.Sound(os.path.join(assets,'zombie_bullet_sound.wav'))
+                pg.mixer.Sound.set_volume(zombie_bullet_sound, volume)
+                zombie_bullet_sound.play()
+        if self.die:
+            zombie_die_sound = pg.mixer.Sound(os.path.join(assets,'zombie_die_sound.wav'))
+            pg.mixer.Sound.set_volume(zombie_die_sound, volume)
+            zombie_die_sound.play()
+            self.die = False
             
     def update(self):
         self.spawn()
@@ -665,6 +713,14 @@ def Game():
         zombie_shoot.update()
         bomb.update()
         
+        #사운드 (wave사운드는 맨 Wave함수와 묶음)
+        bullet.sound(0.1/volume_modify_max*volume_modify)
+        upgrade.sound(2/volume_modify_max*volume_modify)
+        bomb.sound(0.4/volume_modify_max*volume_modify)
+        knife.sound(0.3/volume_modify_max*volume_modify)
+        zombie_shoot.sound(0.4/volume_modify_max*volume_modify)
+        zombie_melee.sound(0.4/volume_modify_max*volume_modify)
+
     #그리기
     bullet.draw()
     atteck_dir.draw()
@@ -674,8 +730,6 @@ def Game():
     knife.draw()
     bomb.draw()
     
-    #사운드
-    bullet.sound()
     #클릭
     Click(upgrade)
 
@@ -707,7 +761,7 @@ def Game():
     text_wavetime = font_wavetime.render(f"웨이브 시간 {wave_time//60}", True, (255,255,255))
     screen.blit(text_wavetime, (screen_width/2-(text_wavetime.get_rect())[2]/2,20))
 
-def Wave():
+def Wave(volume):
     global wave, wave_time, wave_killzombie, wave_fontalpha, zm_spawn, zs_spawn, zm_spawncount, zs_spawncount\
         ,zombie_melee_spawntime, zombie_shoot_spawntime, Z_left,zombie_melee_spawntime,zombie_shoot_spawntime\
         , zm_spawn_startval, zs_spawn_startval, between_wave, wave_fontdraw, card_num
@@ -735,12 +789,14 @@ def Wave():
                 zombie_shoot.spawntime = 1000//zs_spawn
 
                 card_num = random.randint(2,3)
+                upgrade.card_appear = True
                 upgrade.select()
 
                 #사운드
                 wave_change_sound = pg.mixer.Sound(os.path.join(assets,'wave change.wav'))
-                pg.mixer.Sound.set_volume(wave_change_sound, 0.5)
+                pg.mixer.Sound.set_volume(wave_change_sound, volume)
                 wave_change_sound.play()
+
     if wave_fontalpha > 0 and wave_fontdraw:
         wave_fontalpha -= 2.3
 
@@ -758,6 +814,8 @@ def Wave():
     if between_wave > 0 and wave_time > 0:
         wave_time -= 1
 
+def upgrade_max_font():
+    pass
 class Upgrade():
     def __init__(self):
         self.width,self.height = 150,300
@@ -766,20 +824,18 @@ class Upgrade():
         self.space = 70
         self.pos = []
         self.card = []
-        self.select_card = 0
+        self.card_appear = True
+        self.select_card = False
         self.pressing_mouse_initialval = 2
         self.pressing_mouse = 0 #눌렀을 때 초기값 됨, 뗐을 때 0까지 1틱당 1씩 줄어듬
         self.add_card = False
-        #업그레이드 리스트
-        self.upgrade_list = []
-        self.upgrade_list.append("공격 속도 증가") #0
-        self.upgrade_list.append("칼 크기 증가") #1
-        self.upgrade_list.append("칼 쿨타임 감소") #2
-        self.upgrade_list.append("수류탄 2+") #3
-        self.upgrade_list.append("힐(최대체력의 50%)") #4
-        self.upgrade_list.append("힐(100%)") #5
-        self.upgrade_list.append("최대 체력 증가") #6
-        self.upgrade_list.append("이동속도 증가") #7
+        #레벨 제한이 필요한 업그레이드
+        self.maxlevel = 10
+        self.firegun_level = 0
+        self.knife_size_level = 0
+        self.knife_cooltime_level = 0
+        self.health_level = 0
+        self.speed_level = 0
 
     def random(self,card_num):
         while not len(self.card) == card_num:
@@ -839,26 +895,64 @@ class Upgrade():
     def select(self):
         global firegun_time,knife_atteck_term,special_weapon_have,max_health,knife_increase_size
         sc = self.select_card
-        if sc == 0:
-            firegun_time -= 2
-        elif sc == 1:
-            knife_increase_size += 5
-        elif sc == 2:
-            knife_atteck_term -= 3
-        elif sc == 3:
+        if sc == 0:  #공격 속도 증가
+            sc0 = 5.5
+            if self.firegun_level+1 <= self.maxlevel:
+                self.firegun_level += 1
+                firegun_time -= sc0
+            else:
+                special_weapon_have += 1
+        elif sc == 1:  #칼 크기 증가
+            sc1 = 10
+            if self.knife_size_level+1 <= self.maxlevel:
+                self.knife_size_level += 1
+                knife_increase_size += sc1
+            else:
+                special_weapon_have += 1
+        elif sc == 2: #칼 쿨타임 감소
+            sc2 = 9
+            if self.knife_cooltime_level+1 <= self.maxlevel:
+                self.knife_cooltime_level += 1
+                knife_atteck_term -= sc2
+            else:
+                special_weapon_have += 1
+        elif sc == 3: #수류탄 +2
             special_weapon_have += 2
-        elif sc == 4:
+        elif sc == 4: #힐(최대체력의 50%)
             player.health += max_health//2
             if player.health > max_health:
                 player.health = max_health
-        elif sc == 5:
+        elif sc == 5: #힐(100%)
             player.health = max_health
-        elif sc == 6:
-            max_health += 0.5
-        elif sc == 7:
-            player.speed += 0.3
+        elif sc == 6: #최대 체력 증가
+            sc6 = 1
+            if self.health_level+1 <= self.maxlevel:
+                self.health_level += 1
+                max_health += sc6
+                if player.health == max_health - sc6:
+                    player.health = max_health
+            else:
+                special_weapon_have += 1
+        elif sc == 7: #이동속도 증가
+            sc7 = 0.3
+            if self.speed_level+1 <= self.maxlevel:
+                self.speed_level += 1
+                player.speed += sc7
+            else:
+                special_weapon_have += 1
 
     def draw(self):
+        #업그레이드 리스트
+        self.upgrade_list = []
+        self.upgrade_list.append(["공격 속도 증가",f"{self.firegun_level}/{self.maxlevel} level"]) #0
+        self.upgrade_list.append(["칼 크기 증가",f"{self.knife_size_level}/{self.maxlevel} level"]) #1
+        self.upgrade_list.append(["칼 쿨타임 감소",f"{self.knife_cooltime_level}/{self.maxlevel} level"]) #2
+        self.upgrade_list.append(["수류탄 +2"]) #3
+        self.upgrade_list.append(["힐(최대체력의 50%)"]) #4
+        self.upgrade_list.append(["힐(100%)"]) #5
+        self.upgrade_list.append(["최대 체력 증가",f"{self.health_level}/{self.maxlevel} level"]) #6
+        self.upgrade_list.append(["이동속도 증가",f"{self.speed_level}/{self.maxlevel} level"]) #7
+
         for c in self.pos: 
             pg.draw.rect(screen,(0,0,0),[c[0],c[1],self.width,self.height],0)   
             pg.draw.rect(screen,(255,80,199),[c[0],c[1],self.width,self.height],3)
@@ -866,17 +960,29 @@ class Upgrade():
         for cd in self.card:
             cd_index = self.card.index(cd)
             font_ug_des = pg.font.SysFont('한컴산뜻돋움', 15, False, False)
-            text_ug_des = font_ug_des.render(f"{self.upgrade_list[self.card[cd_index]]}", True, (255,255,255))
+            text_ug_des = font_ug_des.render(f"{self.upgrade_list[self.card[cd_index]][0]}", True, (255,255,255))
             try:
-                screen.blit(text_ug_des, (self.pos[cd_index][0]+(self.width-text_ug_des.get_size()[0])/2\
-                                            ,self.pos[cd_index][1]+(self.height-text_ug_des.get_size()[1])/2)) 
+                middle_font_x = self.pos[cd_index][0]+(self.width-text_ug_des.get_size()[0])/2
+                middle_font_y = self.pos[cd_index][1]+(self.height-text_ug_des.get_size()[1])/2
+                screen.blit(text_ug_des, (middle_font_x,middle_font_y)) 
+
+                font_ug_level = pg.font.SysFont('한컴산뜻돋움', 15, False, False)
+                text_ug_level = font_ug_level.render(f"{self.upgrade_list[self.card[cd_index]][1]}", True, (255,255,255))
+                screen.blit(text_ug_level, (middle_font_x+(text_ug_des.get_size()[0]-text_ug_level.get_size()[0])/2,middle_font_y+30)) 
             except:pass
+    
+    def sound(self,volume):
+        if between_wave == 0 and self.card_appear == True:
+            card_sound = pg.mixer.Sound(os.path.join(assets,'card_sound.wav'))
+            pg.mixer.Sound.set_volume(card_sound, volume)
+            card_sound.play()
+            self.card_appear = False
+
     def update(self,card_num):
         self.random(card_num)
         self.select_process(card_num)
-        #self.select()
         self.draw()
-
+    
 def GameOver():
     global special_weapon
     if player.health <= 0:
@@ -963,7 +1069,7 @@ while not done:
 
     mouse_x, mouse_y = pg.mouse.get_pos()
 
-    Wave()
+    Wave(1/volume_modify_max*volume_modify)
     if not player.health <= 0:
         Game() 
     upgrade.update(card_num)
