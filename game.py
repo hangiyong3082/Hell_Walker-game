@@ -94,18 +94,50 @@ class Player(pg.sprite.Sprite):
         self.x = screen_width/2-self.width/2
         self.y = screen_height/2-self.height/2+UIbar_height
         self.health = max_health
-        self.speed = 2.7
+        self.nomal_speed = 2.7
+        self.speed = self.nomal_speed
         self.sprites = []
+        self.walk_sound_initval = 25  #사운드용
+        self.walk_sound = self.walk_sound_initval
+        self.move_condition = False
         #히트박스
         self.hitbox = pg.image.load(os.path.join(assets,'player_hitbox.png'))
         self.h_rect = self.hitbox.get_rect()
         self.h_width,self.h_height = self.hitbox.get_size()
 
     def move(self):
+        #좌우 방향키와 상하 방향키를 같이 누른다면 속도 감소
+        self.decrease_speed = self.nomal_speed - 0.5
+        if len(press_x_list) != 0 and len(press_y_list) != 0:
+            self.speed = self.decrease_speed
+            if press_x_list[-1] < 0:
+                press_x_list[-1] = self.speed*-1
+            else:
+                press_x_list[-1] = self.speed
+            if press_y_list[-1] < 0:
+                press_y_list[-1] = self.speed*-1
+            else:
+                press_y_list[-1] = self.speed
+        else:
+            self.speed += self.nomal_speed - self.speed
+            try:
+                if len(press_x_list) != 0:
+                    if press_x_list[-1] < 0:
+                        press_x_list[-1] = self.speed*-1
+                    else:
+                        press_x_list[-1] = self.speed
+                if len(press_y_list) != 0:
+                    if press_y_list[-1] < 0:
+                        press_y_list[-1] = self.speed*-1
+                    else:
+                        press_y_list[-1] = self.speed
+            except:
+                pass
+        #메인
         if press_left == False and press_right == False:
             press_x_list.clear()
         if len(press_x_list) > 2:
-            del press_x_list[0]
+            del press_x_list[0]        
         try:
             self.x += press_x_list[len(press_x_list)-1]
         except Exception:
@@ -113,7 +145,7 @@ class Player(pg.sprite.Sprite):
         if press_up == False and press_down == False:
             press_y_list.clear()
         if len(press_y_list) > 2:
-            del press_y_list[0]
+            del press_y_list[0]        
         try:
             self.y += press_y_list[len(press_y_list)-1]
         except Exception:
@@ -122,11 +154,31 @@ class Player(pg.sprite.Sprite):
         if self.x < 0:self.x += self.speed
         if self.x > screen_width-self.width:self.x -= self.speed
         if self.y < UIbar_height:self.y += self.speed
-        if self.y > screen_height+UIbar_height-self.height:self.y -= self.speed  
+        if self.y > screen_height+UIbar_height-self.height:self.y -= self.speed
+
     def draw(self):
         screen.blit(self.img,[self.x,self.y])
 
+    def sound(self,volume):
+        if len(press_x_list) != 0 or len(press_y_list) != 0:
+            self.move_condition = True
+        else:
+            self.move_condition = False
+
+        if self.move_condition:
+            if self.walk_sound <= 0:
+                self.walk_sound = self.walk_sound_initval
+
+                walk_sound = pg.mixer.Sound(os.path.join(assets,'walk_sound.wav'))
+                pg.mixer.Sound.set_volume(walk_sound, volume)
+                walk_sound.play()
+
+            self.walk_sound -= 1
+        else:
+            self.walk_sound = self.walk_sound_initval
+
     def update(self):
+        self.move()
         self.centerx = self.x + self.width/2
         self.centery = self.y + self.height/2
         self.rect.topleft = (self.x,self.y)
@@ -134,9 +186,6 @@ class Player(pg.sprite.Sprite):
         self.h_x = self.x + (self.width-self.h_width)/2
         self.h_y = self.y + (self.height-self.h_height)/2
         self.h_rect.topleft = (self.centerx,self.centery)
-        #screen.blit(self.hitbox,[self.h_x,self.h_y])
-
-        self.move()
        
 #공격 방향 표시
 class Atteck_dir():
@@ -439,6 +488,11 @@ class Zombie_melee():
         self.crashbox = pg.image.load(os.path.join(assets,'zombie_1_crashbox.png'))
         self.c_rect = self.crashbox.get_rect()
         self.c_width,self.h_height = self.crashbox.get_size()
+        #플레이어 데미지 표시
+        self.ph_bg_img = pg.image.load(os.path.join(assets,'hurt_background4.jpg'))
+        self.ph_bg_appear = False  #ph (player hurt)
+        self.ph_bg_transparent_initval = 100
+        self.ph_bg_transparent = self.ph_bg_transparent_initval
 
     def spawn(self):
         global zm_spawncount,zm_spawn
@@ -482,7 +536,8 @@ class Zombie_melee():
             if Zmp_rect.colliderect(player.h_rect):
                 if Zmp[6] == 0:
                     player.health -= 1
-                    Zmp[6] = zombie_melee_crash_player_time                
+                    Zmp[6] = zombie_melee_crash_player_time    
+                    self.ph_bg_appear = True            
             if Zmp[6] != 0:
                 Zmp[6] -= 1
             #die
@@ -514,6 +569,18 @@ class Zombie_melee():
             pg.mixer.Sound.set_volume(zombie_die_sound, volume)
             zombie_die_sound.play()
             self.die = False
+
+    def player_hurt_bg(self):
+        print(self.ph_bg_transparent)
+        if self.ph_bg_appear:
+            if self.ph_bg_transparent > 0:
+                self.ph_bg_img.set_alpha(self.ph_bg_transparent)
+                screen.blit(self.ph_bg_img,(0,UIbar_height))
+                self.ph_bg_transparent -= 2
+            else:
+                self.ph_bg_transparent = self.ph_bg_transparent_initval
+                self.ph_bg_img.set_alpha(self.ph_bg_transparent)
+                self.ph_bg_appear = False
 
     def update(self):
         self.spawn()
@@ -718,9 +785,10 @@ def Game():
         upgrade.sound(2/volume_modify_max*volume_modify)
         bomb.sound(0.4/volume_modify_max*volume_modify)
         knife.sound(0.3/volume_modify_max*volume_modify)
-        zombie_shoot.sound(0.4/volume_modify_max*volume_modify)
-        zombie_melee.sound(0.4/volume_modify_max*volume_modify)
-
+        zombie_shoot.sound(0.5/volume_modify_max*volume_modify)
+        zombie_melee.sound(0.5/volume_modify_max*volume_modify)
+        player.sound(0.4/volume_modify_max*volume_modify)
+    
     #그리기
     bullet.draw()
     atteck_dir.draw()
@@ -760,6 +828,10 @@ def Game():
     font_wavetime = pg.font.SysFont('한컴산뜻돋움', 20, False, False)
     text_wavetime = font_wavetime.render(f"웨이브 시간 {wave_time//60}", True, (255,255,255))
     screen.blit(text_wavetime, (screen_width/2-(text_wavetime.get_rect())[2]/2,20))
+    #남은 좀비 수
+    font_zombie_left = pg.font.SysFont('한컴산뜻돋움', 18, False, False)
+    text_zombie_left = font_zombie_left.render(f"남은 좀비 수 {int(Z_left)}", True, (71,200,62))
+    screen.blit(text_zombie_left, (screen_width/2-(text_zombie_left.get_rect())[2]/2,110))
 
 def Wave(volume):
     global wave, wave_time, wave_killzombie, wave_fontalpha, zm_spawn, zs_spawn, zm_spawncount, zs_spawncount\
@@ -937,7 +1009,7 @@ class Upgrade():
             sc7 = 0.3
             if self.speed_level+1 <= self.maxlevel:
                 self.speed_level += 1
-                player.speed += sc7
+                player.nomal_speed += sc7
             else:
                 special_weapon_have += 1
 
