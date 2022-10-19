@@ -1,20 +1,21 @@
-from turtle import up
+#-*- coding:utf-8 -*-
 import pygame as pg, os, time, random, math, sys
 
 pg.init()
 
 #기본 세팅
 screen_width = 1200
-screen_height = 700
+screen_height = 600 #원래값 : 700
 UIbar_height = 150
 screen = pg.display.set_mode([screen_width,screen_height+UIbar_height])
 pg.display.set_caption("Hell Walker")
 
+background_color = (40,40,40)
 black = (0,0,0)
 
 clock = pg.time.Clock()
 done = False
-a= 0
+
 def file_path(relative_path):  #파일경로
     try:
         base_path = sys._MEIPASS
@@ -67,7 +68,7 @@ Z_left = 0
 wave = 0
 wave_time = 0
 wave_killzombie = 0
-wave_fontalpha = 200
+wave_fontalpha = 255
 between_wave = 60
 wave_fontdraw = False
     #수류탄
@@ -81,7 +82,21 @@ DoingUpgrade = False
 card_num = random.randint(2,3)
     #사운드
 volume_modify_max = 10
-volume_modify = 5
+volume_modify = 3
+gameover_sound_play = 0
+    #폰트
+original_font_available = False
+gamefont = 'nanumgothic'
+for i in pg.font.get_fonts():
+    if i == '한컴산뜻돋움':
+        original_font_available = True
+        gamefont = '한컴산뜻돋움'
+
+#텍스트
+def Text(font,size,bold,italic,contents,antialias,color):
+    font = pg.font.SysFont(font,size,bold,italic)
+    text = font.render(contents,antialias,color)
+    return text
 
 #플레이어
 class Player(pg.sprite.Sprite):
@@ -489,10 +504,12 @@ class Zombie_melee():
         self.c_rect = self.crashbox.get_rect()
         self.c_width,self.h_height = self.crashbox.get_size()
         #플레이어 데미지 표시
-        self.ph_bg_img = pg.image.load(os.path.join(assets,'hurt_background4.jpg'))
-        self.ph_bg_appear = False  #ph (player hurt)
-        self.ph_bg_transparent_initval = 100
-        self.ph_bg_transparent = self.ph_bg_transparent_initval
+        self.ph_e_img = pg.image.load(os.path.join(assets,'player_hurt.png'))
+        self.ph_e_appear = False
+        self.ph_e_transparent_initval = 150
+        self.ph_e_transparent = self.ph_e_transparent_initval
+        #플레이어 데미지 사운드
+        self.ph_sound = False
 
     def spawn(self):
         global zm_spawncount,zm_spawn
@@ -537,7 +554,9 @@ class Zombie_melee():
                 if Zmp[6] == 0:
                     player.health -= 1
                     Zmp[6] = zombie_melee_crash_player_time    
-                    self.ph_bg_appear = True            
+                    self.ph_e_appear = True     
+                    self.ph_sound = True    
+                    self.ph_e_transparent = self.ph_e_transparent_initval
             if Zmp[6] != 0:
                 Zmp[6] -= 1
             #die
@@ -563,24 +582,28 @@ class Zombie_melee():
             else:
                 screen.blit(self.img,(Zm[0],Zm[1]))
 
-    def sound(self,volume):
+    def sound(self,volume_die,volume_ph):
         if self.die:
             zombie_die_sound = pg.mixer.Sound(os.path.join(assets,'zombie_die_sound.wav'))
-            pg.mixer.Sound.set_volume(zombie_die_sound, volume)
+            pg.mixer.Sound.set_volume(zombie_die_sound, volume_die)
             zombie_die_sound.play()
             self.die = False
+        if self.ph_sound:
+            ph_sound = pg.mixer.Sound(os.path.join(assets,'player_hurt_sound.wav'))
+            pg.mixer.Sound.set_volume(ph_sound, volume_ph)
+            ph_sound.play()
+            self.ph_sound = False
 
-    def player_hurt_bg(self):
-        print(self.ph_bg_transparent)
-        if self.ph_bg_appear:
-            if self.ph_bg_transparent > 0:
-                self.ph_bg_img.set_alpha(self.ph_bg_transparent)
-                screen.blit(self.ph_bg_img,(0,UIbar_height))
-                self.ph_bg_transparent -= 2
+    def player_hurt_effect(self):
+        if self.ph_e_appear:
+            if self.ph_e_transparent > 0:
+                self.ph_e_img.set_alpha(self.ph_e_transparent)
+                screen.blit(self.ph_e_img,(player.x,player.y))
+                self.ph_e_transparent -= 2
             else:
-                self.ph_bg_transparent = self.ph_bg_transparent_initval
-                self.ph_bg_img.set_alpha(self.ph_bg_transparent)
-                self.ph_bg_appear = False
+                self.ph_e_transparent = self.ph_e_transparent_initval
+                self.ph_e_img.set_alpha(self.ph_e_transparent)
+                self.ph_e_appear = False
 
     def update(self):
         self.spawn()
@@ -613,6 +636,13 @@ class Zombie_shoot():
         self.b_width, self.b_height = self.b_img.get_size()
         self.b_speed = 7
         self.shooting_time = zombie_shoot_shooting_time
+        #플레이어 데미지 표시
+        self.ph_e_img = pg.image.load(os.path.join(assets,'player_hurt.png'))
+        self.ph_e_appear = False
+        self.ph_e_transparent_initval = 150
+        self.ph_e_transparent = self.ph_e_transparent_initval
+        #플레이어 데미지 사운드
+        self.ph_sound = False
 
     def spawn(self):
         global zs_spawncount,zs_spawn
@@ -685,6 +715,9 @@ class Zombie_shoot():
             #atteck
             if self.b_rect.colliderect(player.h_rect):
                 player.health -= 1
+                self.ph_e_appear = True     
+                self.ph_sound = True    
+                self.ph_e_transparent = self.ph_e_transparent_initval
                 self.bullet.remove(Zb)
         
     def draw(self):
@@ -694,17 +727,33 @@ class Zombie_shoot():
         for Zb in self.bullet:
             screen.blit(self.b_img,(Zb[0],Zb[1]))
 
-    def sound(self,volume):
+    def sound(self,volume_bullet,volume_die,volume_ph):
         for Zs in self.list:
             if Zs[7] == 0:
                 zombie_bullet_sound = pg.mixer.Sound(os.path.join(assets,'zombie_bullet_sound.wav'))
-                pg.mixer.Sound.set_volume(zombie_bullet_sound, volume)
+                pg.mixer.Sound.set_volume(zombie_bullet_sound, volume_bullet)
                 zombie_bullet_sound.play()
         if self.die:
             zombie_die_sound = pg.mixer.Sound(os.path.join(assets,'zombie_die_sound.wav'))
-            pg.mixer.Sound.set_volume(zombie_die_sound, volume)
+            pg.mixer.Sound.set_volume(zombie_die_sound, volume_die)
             zombie_die_sound.play()
             self.die = False
+        if self.ph_sound:
+            ph_sound = pg.mixer.Sound(os.path.join(assets,'player_hurt_sound.wav'))
+            pg.mixer.Sound.set_volume(ph_sound, volume_ph)
+            ph_sound.play()
+            self.ph_sound = False
+    
+    def player_hurt_effect(self):
+        if self.ph_e_appear:
+            if self.ph_e_transparent > 0:
+                self.ph_e_img.set_alpha(self.ph_e_transparent)
+                screen.blit(self.ph_e_img,(player.x,player.y))
+                self.ph_e_transparent -= 2
+            else:
+                self.ph_e_transparent = self.ph_e_transparent_initval
+                self.ph_e_img.set_alpha(self.ph_e_transparent)
+                self.ph_e_appear = False
             
     def update(self):
         self.spawn()
@@ -785,8 +834,9 @@ def Game():
         upgrade.sound(2/volume_modify_max*volume_modify)
         bomb.sound(0.4/volume_modify_max*volume_modify)
         knife.sound(0.3/volume_modify_max*volume_modify)
-        zombie_shoot.sound(0.5/volume_modify_max*volume_modify)
-        zombie_melee.sound(0.5/volume_modify_max*volume_modify)
+        zombie_shoot.sound(0.5/volume_modify_max*volume_modify,0.5/volume_modify_max*volume_modify\
+                            ,0.3/volume_modify_max*volume_modify)
+        zombie_melee.sound(0.5/volume_modify_max*volume_modify, 0.3/volume_modify_max*volume_modify)
         player.sound(0.4/volume_modify_max*volume_modify)
     
     #그리기
@@ -794,6 +844,8 @@ def Game():
     atteck_dir.draw()
     zombie_shoot.draw()
     player.draw()
+    zombie_melee.player_hurt_effect()
+    zombie_shoot.player_hurt_effect()
     zombie_melee.draw()
     knife.draw()
     bomb.draw()
@@ -805,32 +857,25 @@ def Game():
     pg.draw.rect(screen,(0,0,0),[0,0,screen_width,UIbar_height],0)
     pg.draw.rect(screen,(255,80,199),[0,0,screen_width,UIbar_height],3)
     #체력
-    font_health = pg.font.SysFont('한컴산뜻돋움', 50, False, False)
-    text_health = font_health.render(f"체력 : {player.health}/{max_health}", True, (255,72,199))
+    text_health = Text(gamefont, 50, False, False,f"체력 : {player.health:0.1f}/{max_health}", True, (255,72,199))
     screen.blit(text_health, (screen_width/2-(text_health.get_rect())[2]/2,50))
     #칼 쿨타임
-    font_k_cooltime = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
-    text_k_cooltime = font_k_cooltime.render(f"칼 쿨타임 : {knife.atteck_term/60:0.2f}", True, (243,97,220))
+    text_k_cooltime = Text(gamefont, 30, False, True,f"칼 쿨타임 : {knife.atteck_term/60:0.2f}", True, (243,97,220))
     screen.blit(text_k_cooltime, (800,30))
     #수류탄 개수
-    font_bomb = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
-    text_bomb = font_bomb.render(f"수류탄 개수 : {special_weapon_have}", True, (255,97,166))
+    text_bomb = Text(gamefont, 30, False, True,f"수류탄 개수 : {special_weapon_have}", True, (255,97,166))
     screen.blit(text_bomb, (800,75))
     #웨이브
-    font_score = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
-    text_score = font_score.render(f"wave : {wave}", True, (255,36,163))
-    screen.blit(text_score, (220,30))
+    text_wave = Text(gamefont, 30, False, True,f"wave : {wave}", True, (255,36,163))
+    screen.blit(text_wave, (220,30))
     #점수
-    font_score = pg.font.SysFont('한컴산뜻돋움', 30, False, True)
-    text_score = font_score.render(f"점수 : {score}", True, (110,227,247))
+    text_score = Text(gamefont, 30, False, True,f"점수 : {score}", True, (110,227,247))
     screen.blit(text_score, (220,80))
     #웨이브 시간
-    font_wavetime = pg.font.SysFont('한컴산뜻돋움', 20, False, False)
-    text_wavetime = font_wavetime.render(f"웨이브 시간 {wave_time//60}", True, (255,255,255))
+    text_wavetime = Text(gamefont, 20, False, False,f"웨이브 시간 {wave_time//60}", True, (255,255,255))
     screen.blit(text_wavetime, (screen_width/2-(text_wavetime.get_rect())[2]/2,20))
     #남은 좀비 수
-    font_zombie_left = pg.font.SysFont('한컴산뜻돋움', 18, False, False)
-    text_zombie_left = font_zombie_left.render(f"남은 좀비 수 {int(Z_left)}", True, (71,200,62))
+    text_zombie_left = Text(gamefont, 18, False, False, f"남은 좀비 수 {int(Z_left)}", True, (71,200,62))
     screen.blit(text_zombie_left, (screen_width/2-(text_zombie_left.get_rect())[2]/2,110))
 
 def Wave(volume):
@@ -873,21 +918,15 @@ def Wave(volume):
         wave_fontalpha -= 2.3
 
         #웨이브 알림
-        font_wave = pg.font.SysFont('Times new Roman',150, True, False)
-        textsurface = font_wave.render(f"WAVE {wave}", True, (255,80,199))
-        surface = pg.Surface((textsurface.get_rect()[2], textsurface.get_rect()[3]))
-        surface.fill(black)
-        surface.blit(textsurface, pg.Rect(0, 0, 10, 10))
-        surface.set_alpha(wave_fontalpha)
-        screen.blit(surface,(screen_width/2-(surface.get_rect())[2]/2,screen_height/2-(surface.get_rect())[1]/2))
+        text_wave = Text('Times new Roman',150, True, False,f"WAVE {wave}", True, (255,36,163))
+        text_wave.set_alpha(wave_fontalpha)
+        screen.blit(text_wave,(screen_width/2-(text_wave.get_rect())[2]/2,screen_height/2-(text_wave.get_rect())[1]/2))
     else:
         wave_fontdraw = False
 
     if between_wave > 0 and wave_time > 0:
         wave_time -= 1
 
-def upgrade_max_font():
-    pass
 class Upgrade():
     def __init__(self):
         self.width,self.height = 150,300
@@ -999,11 +1038,10 @@ class Upgrade():
         elif sc == 6: #최대 체력 증가
             sc6 = 1
             if self.health_level+1 <= self.maxlevel:
-                self.health_level += 1
+                player.health += max_health/player.health*sc6
                 max_health += sc6
-                if player.health == max_health - sc6:
-                    player.health = max_health
-            else:
+                self.health_level += 1
+            else:  #레벨이 최대일 때
                 special_weapon_have += 1
         elif sc == 7: #이동속도 증가
             sc7 = 0.3
@@ -1016,7 +1054,7 @@ class Upgrade():
     def draw(self):
         #업그레이드 리스트
         self.upgrade_list = []
-        self.upgrade_list.append(["공격 속도 증가",f"{self.firegun_level}/{self.maxlevel} level"]) #0
+        self.upgrade_list.append(["총 공격 속도 증가",f"{self.firegun_level}/{self.maxlevel} level"]) #0
         self.upgrade_list.append(["칼 크기 증가",f"{self.knife_size_level}/{self.maxlevel} level"]) #1
         self.upgrade_list.append(["칼 쿨타임 감소",f"{self.knife_cooltime_level}/{self.maxlevel} level"]) #2
         self.upgrade_list.append(["수류탄 +2"]) #3
@@ -1031,22 +1069,18 @@ class Upgrade():
            
         for cd in self.card:
             cd_index = self.card.index(cd)
-            font_ug_des = pg.font.SysFont('한컴산뜻돋움', 15, False, False)
-            text_ug_des = font_ug_des.render(f"{self.upgrade_list[self.card[cd_index]][0]}", True, (255,255,255))
+            text_ug_des = Text(gamefont, 15, False, False,f"{self.upgrade_list[self.card[cd_index]][0]}",True,(255,255,255))
             try:
                 middle_font_x = self.pos[cd_index][0]+(self.width-text_ug_des.get_size()[0])/2
                 middle_font_y = self.pos[cd_index][1]+(self.height-text_ug_des.get_size()[1])/2
                 screen.blit(text_ug_des, (middle_font_x,middle_font_y)) 
 
-                font_ug_level = pg.font.SysFont('한컴산뜻돋움', 15, False, False)
-                text_ug_level = font_ug_level.render(f"{self.upgrade_list[self.card[cd_index]][1]}", True, (0,216,255))
+                text_ug_level = Text(gamefont, 15, False, False, f"{self.upgrade_list[self.card[cd_index]][1]}", True, (0,216,255))
                 screen.blit(text_ug_level, (middle_font_x+(text_ug_des.get_size()[0]-text_ug_level.get_size()[0])/2,middle_font_y+30)) 
 
-                font_detail_des = pg.font.SysFont('한컴산뜻돋움', 25, False, True)
-                text_detail_des = font_detail_des.render("최고 레벨인 카드를 선택할 시 수류탄 +1", True, (166,166,166))
-                screen.blit(text_detail_des, ((screen_width-text_detail_des.get_size()[0])/2,500+UIbar_height)) 
+                text_detail_des = Text(gamefont, 25, False, True, "최고 레벨인 카드를 선택할 시 수류탄 +1", True, (166,166,166))
+                screen.blit(text_detail_des, ((screen_width-text_detail_des.get_size()[0])/2,500+UIbar_height))    
             except:pass
-            
     
     def sound(self,volume):
         if between_wave == 0 and self.card_appear == True:
@@ -1059,21 +1093,30 @@ class Upgrade():
         self.random(card_num)
         self.select_process(card_num)
         self.draw()
-    
-def GameOver():
-    global special_weapon
+
+def GameOver(volume):
+    global special_weapon,gameover_sound_play
     if player.health <= 0:
         screen.fill(black)
-
-        font_totalwave = pg.font.SysFont('휴먼매직체', 70, False, False)
-        text_totalwave = font_totalwave.render(f"wave : {wave}", True, (255,72,199))
+        #text
+        text_die_message = Text(gamefont,30,False,True,"더 이상 버티지 못하였습니다...",True,(204,61,61))
+        screen.blit(text_die_message,(screen_width/2-(text_die_message.get_rect())[2]/2,UIbar_height+30))
+        
+        text_totalwave = Text(gamefont, 70, True,False,f"wave : {wave}",True,(255,72,199))
         screen.blit(text_totalwave, (screen_width/2-(text_totalwave.get_rect())[2]/2,\
             screen_height/2-(text_totalwave.get_rect())[3]/2+UIbar_height/2-70))
 
-        font_score = pg.font.SysFont('휴먼매직체', 50, False, True)
-        text_score = font_score.render(f"점수 : {score}", True, (255,255,255))
-        screen.blit(text_score, (screen_width/2-(text_score.get_rect())[2]/2,\
-            screen_height/2-(text_score.get_rect())[3]/2+UIbar_height/2+30))
+        text_totalscore = Text(gamefont, 50, False, True,f"점수 : {score}",True, (110,227,247))
+        screen.blit(text_totalscore, (screen_width/2-(text_totalscore.get_rect())[2]/2,\
+            screen_height/2-(text_totalscore.get_rect())[3]/2+UIbar_height/2+30))
+
+        #sound
+        if gameover_sound_play <= 1:
+            gameover_sound_play += 1
+        if gameover_sound_play == 1:
+            gameover_sound = pg.mixer.Sound(os.path.join(assets,'player_die_sound.wav'))
+            pg.mixer.Sound.set_volume(gameover_sound,volume)
+            gameover_sound.play()
 
         pg.mouse.set_visible(True)
 
@@ -1088,71 +1131,72 @@ zombie_shoot = Zombie_shoot()
 bomb = Bomb()
 upgrade = Upgrade()
 
-while not done:
-    screen.fill(black)
-    for event in pg.event.get():
-        if event.type == pg.QUIT:
-            done = True
-        if event.type == pg.KEYDOWN:
-            if event.key == pg.K_a:
-                press_x_list.append(-player.speed)
-                press_left = True
-            if event.key == pg.K_d:
-                press_x_list.append(player.speed)
-                press_right = True 
-            if event.key == pg.K_w:
-                press_y_list.append(-player.speed)
-                press_up = True
-            if event.key == pg.K_s:
-                press_y_list.append(player.speed)
-                press_down = True
-            
-            if event.key == pg.K_1:  #총
-                weapon = 0
-                special_weapon = False  #칼
-            if event.key == pg.K_2:
-                weapon = 1
-                special_weapon = False     
-            if event.key == pg.K_g:
-                special_weapon = True
-            
-        if event.type == pg.KEYUP:
-            if event.key == pg.K_a:
-                press_left = False
-                if press_right == True:
-                    press_x_list.append(player.speed)
-            if event.key == pg.K_d:
-                press_right = False
-                if press_left == True:
+if __name__ == '__main__':
+    while not done:
+        screen.fill(background_color)
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
+                done = True
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_a:
                     press_x_list.append(-player.speed)
-            if event.key == pg.K_w:
-                press_up = False
-                if press_down == True:
-                    press_y_list.append(player.speed)
-            if event.key == pg.K_s:
-                press_down = False
-                if press_up == True:
+                    press_left = True
+                if event.key == pg.K_d:
+                    press_x_list.append(player.speed)
+                    press_right = True 
+                if event.key == pg.K_w:
                     press_y_list.append(-player.speed)
+                    press_up = True
+                if event.key == pg.K_s:
+                    press_y_list.append(player.speed)
+                    press_down = True
+                
+                if event.key == pg.K_1:  #총
+                    weapon = 0
+                    special_weapon = False  #칼
+                if event.key == pg.K_2:
+                    weapon = 1
+                    special_weapon = False     
+                if event.key == pg.K_g:
+                    special_weapon = True
+                
+            if event.type == pg.KEYUP:
+                if event.key == pg.K_a:
+                    press_left = False
+                    if press_right == True:
+                        press_x_list.append(player.speed)
+                if event.key == pg.K_d:
+                    press_right = False
+                    if press_left == True:
+                        press_x_list.append(-player.speed)
+                if event.key == pg.K_w:
+                    press_up = False
+                    if press_down == True:
+                        press_y_list.append(player.speed)
+                if event.key == pg.K_s:
+                    press_down = False
+                    if press_up == True:
+                        press_y_list.append(-player.speed)
 
-    if pg.mouse.get_pressed()[0] == True:
-        click_left = True
-    if pg.mouse.get_pressed()[0] == False:
-        click_left = False
-        special_weapon_click = 1
-    if pg.mouse.get_pressed()[2] == True:
-        click_right = True
-    if pg.mouse.get_pressed()[2] == False:
-        click_right = False    
+        if pg.mouse.get_pressed()[0] == True:
+            click_left = True
+        if pg.mouse.get_pressed()[0] == False:
+            click_left = False
+            special_weapon_click = 1
+        if pg.mouse.get_pressed()[2] == True:
+            click_right = True
+        if pg.mouse.get_pressed()[2] == False:
+            click_right = False    
 
-    mouse_x, mouse_y = pg.mouse.get_pos()
+        mouse_x, mouse_y = pg.mouse.get_pos()
 
-    Wave(1/volume_modify_max*volume_modify)
-    if not player.health <= 0:
-        Game() 
-    upgrade.update(card_num)
-    GameOver()
-    Crash_Zombie(zombie_melee,zombie_shoot)
-    
-    pg.display.flip()
-    clock.tick(60)
-pg.quit()
+        Wave(0.7/volume_modify_max*volume_modify)
+        if not player.health <= 0:
+            Game() 
+        upgrade.update(card_num)
+        GameOver(1.7/volume_modify_max*volume_modify)
+        Crash_Zombie(zombie_melee,zombie_shoot)
+        
+        pg.display.flip()
+        clock.tick(60)
+    pg.quit()
