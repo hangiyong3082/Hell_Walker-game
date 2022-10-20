@@ -1,11 +1,17 @@
 #-*- coding:utf-8 -*-
 import pygame as pg, os, time, random, math, sys
+from tkinter import *
 
 pg.init()
 
+root = Tk()
+
+monitor_height = root.winfo_screenheight()
+monitor_width = root.winfo_screenwidth()
+
 #기본 세팅
 screen_width = 1200
-screen_height = 600 #원래값 : 700
+screen_height = 650
 UIbar_height = 150
 screen = pg.display.set_mode([screen_width,screen_height+UIbar_height])
 pg.display.set_caption("Hell Walker")
@@ -16,6 +22,10 @@ black = (0,0,0)
 clock = pg.time.Clock()
 done = False
 
+def change_dir(path): #경로 설정
+    os.chdir(path)
+change_dir('.')
+
 def file_path(relative_path):  #파일경로
     try:
         base_path = sys._MEIPASS
@@ -23,9 +33,24 @@ def file_path(relative_path):  #파일경로
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
+def load_img(path,img):  #이미지 함수
+    return pg.image.load(os.path.join(path,img))
+
+#폰트
+gamefont = 'nanumgothic'
+for i in pg.font.get_fonts():
+    if i == '한컴산뜻돋움':
+        gamefont = '한컴산뜻돋움'
+        
+#텍스트 함수
+def Text(font,size,bold,italic,contents,antialias,color):
+    font = pg.font.SysFont(font,size,bold,italic)
+    text = font.render(contents,antialias,color)
+    return text
+
 #전역 변수
     #파일
-assets = file_path('jamsil_surviver/assets')
+assets = file_path('assets')
     #클릭
 press_x_list = []
 press_y_list = []
@@ -84,15 +109,12 @@ card_num = random.randint(2,3)
 volume_modify_max = 10
 volume_modify = 3
 gameover_sound_play = 0
-    #폰트
-original_font_available = False
+#폰트
 gamefont = 'nanumgothic'
 for i in pg.font.get_fonts():
     if i == '한컴산뜻돋움':
-        original_font_available = True
         gamefont = '한컴산뜻돋움'
-
-#텍스트
+#텍스트 함수
 def Text(font,size,bold,italic,contents,antialias,color):
     font = pg.font.SysFont(font,size,bold,italic)
     text = font.render(contents,antialias,color)
@@ -206,8 +228,8 @@ class Player(pg.sprite.Sprite):
 class Atteck_dir():
     def __init__(self):
         self.img = []
-        self.img.append([pg.image.load(os.path.join(assets,'atteck_dir_gun.png')),0,0,(34,177,76)])
-        self.img.append([pg.image.load(os.path.join(assets,'atteck_dir_knife.png')),0,0,(70,235,125)])
+        self.img.append([load_img(assets,'atteck_dir_gun.png'),0,0,(34,177,76)])
+        self.img.append([load_img(assets,'atteck_dir_knife.png'),0,0,(70,235,125)])
         for s in self.img:
             s[1] = s[0].get_size()[0]
             s[2] = s[0].get_size()[1]
@@ -229,7 +251,7 @@ class Atteck_dir():
 #무기가 수류탄일 때 마우스에 타겟 이미지
 class Target_mouse():
     def __init__(self):
-        self.img = pg.image.load(os.path.join(assets,'target.png'))
+        self.img = load_img(assets,'target.png')
         self.width, self.height = self.img.get_size()
         self.img.set_colorkey((0,0,0))
     def update(self):
@@ -241,7 +263,7 @@ class Target_mouse():
 #총알
 class Bullet():
     def __init__(self):
-        self.img = pg.image.load(os.path.join(assets,'bullet.png'))
+        self.img = load_img(assets,'bullet.png')
         self.width,self.height = self.img.get_size()
         self.rect = self.img.get_rect()
         self.speed = 10
@@ -488,7 +510,7 @@ class Bomb():
 #좀비(근접)
 class Zombie_melee():
     def __init__(self):
-        self.img = pg.image.load(os.path.join(assets,'zombie_1.png'))
+        self.img = pg.image.load(os.path.join(assets,'zombie_1.jpg'))
         self.img_Lflip = pg.transform.flip(self.img,True,False)
         self.width, self.height = self.img.get_size()
         self.rect = self.img.get_rect()
@@ -619,7 +641,7 @@ class Zombie_melee():
 class Zombie_shoot():
     def __init__(self):
         #zombie
-        self.img = pg.image.load(os.path.join(assets,'zombie_2.png'))
+        self.img = pg.image.load(os.path.join(assets,'zombie_2.jpg'))
         self.width, self.height = self.img.get_size()
         self.rect = self.img.get_rect()
         self.speed = 2
