@@ -18,6 +18,7 @@ pg.display.set_caption("Hell Walker")
 
 background_color = (40,40,40)
 black = (0,0,0)
+set_color = (0,0,0)
 
 clock = pg.time.Clock()
 done = False
@@ -26,7 +27,7 @@ def change_dir(path): #경로 설정
     os.chdir(path)
 change_dir('.')
 
-def file_path(relative_path):  #파일경로
+def resource_path(relative_path):  #파일경로
     try:
         base_path = sys._MEIPASS
     except Exception:
@@ -50,7 +51,7 @@ def Text(font,size,bold,italic,contents,antialias,color):
 
 #전역 변수
     #파일
-assets = file_path('assets')
+assets = resource_path('assets')
     #클릭
 press_x_list = []
 press_y_list = []
@@ -109,23 +110,16 @@ card_num = random.randint(2,3)
 volume_modify_max = 10
 volume_modify = 3
 gameover_sound_play = 0
-#폰트
-gamefont = 'nanumgothic'
-for i in pg.font.get_fonts():
-    if i == '한컴산뜻돋움':
-        gamefont = '한컴산뜻돋움'
-#텍스트 함수
-def Text(font,size,bold,italic,contents,antialias,color):
-    font = pg.font.SysFont(font,size,bold,italic)
-    text = font.render(contents,antialias,color)
-    return text
+
+def sound_set(proportion_sound):  #사운드 함수
+    return proportion_sound/volume_modify_max*volume_modify
 
 #플레이어
 class Player(pg.sprite.Sprite):
     def __init__(self):
         super(Player,self).__init__()
         global max_health
-        self.img = pg.image.load(os.path.join(assets,'player.png'))
+        self.img = load_img(assets,'player.png')
         self.rect = self.img.get_rect()
         self.width,self.height = self.img.get_size()
         self.x = screen_width/2-self.width/2
@@ -138,7 +132,7 @@ class Player(pg.sprite.Sprite):
         self.walk_sound = self.walk_sound_initval
         self.move_condition = False
         #히트박스
-        self.hitbox = pg.image.load(os.path.join(assets,'player_hitbox.png'))
+        self.hitbox = load_img(assets,'player_hitbox.png')
         self.h_rect = self.hitbox.get_rect()
         self.h_width,self.h_height = self.hitbox.get_size()
 
@@ -331,7 +325,7 @@ class Bullet():
 class Knife():
     def __init__(self):
         global knife_atteck_term, knife_atteck_timelong
-        self.img = pg.image.load(os.path.join(assets,'knife_hitbox.png'))
+        self.img = load_img(assets,'knife_hitbox.png')
         self.width, self.height = self.img.get_size()
         self.atteck_term = 0
         self.cooltime = 0
@@ -400,10 +394,10 @@ class Knife():
 #특수무기(수류탄)-------------------------------------------------------------------------------------------------
 class Bomb():
     def __init__(self):
-        self.img = pg.image.load(os.path.join(assets,'bomb.png'))
+        self.img = load_img(assets,'bomb.png')
         self.img.set_colorkey((255,255,255))     
         self.width, self.height = self.img.get_size()   
-        self.f_img = pg.image.load(os.path.join(assets,'fallingpos.png'))  
+        self.f_img = load_img(assets,'fallingpos.png')
         self.f_img.set_colorkey((0,0,0)) 
         self.fallingpos = []
         self.bomblist = []
@@ -411,16 +405,16 @@ class Bomb():
         self.explode_draw = []
         self.bomb_arrive = False #사운드용
         #히트박스
-        self.h_img = pg.image.load(os.path.join(assets,'explode_hitbox.png'))
+        self.h_img = load_img(assets,'explode_hitbox.png')
         self.h_img.set_colorkey((255,255,255))
         self.h_width, self.h_height = self.h_img.get_size()   
         self.rect = self.h_img.get_rect()
         #폭발 모션
         self.e_img = []
-        self.e_img.append(pg.image.load(os.path.join(assets,'explode_1.png')))
-        self.e_img.append(pg.image.load(os.path.join(assets,'explode_2.png')))
-        self.e_img.append(pg.image.load(os.path.join(assets,'explode_3.png')))
-        self.e_img.append(pg.image.load(os.path.join(assets,'explode_4.png')))
+        self.e_img.append(load_img(assets,'explode_1.png'))
+        self.e_img.append(load_img(assets,'explode_2.png'))
+        self.e_img.append(load_img(assets,'explode_3.png'))
+        self.e_img.append(load_img(assets,'explode_4.png'))
         self.e_img[0].set_colorkey((255,255,255))
         self.e_img[1].set_colorkey((255,255,255))
         self.e_img[2].set_colorkey((255,255,255))
@@ -510,7 +504,7 @@ class Bomb():
 #좀비(근접)
 class Zombie_melee():
     def __init__(self):
-        self.img = pg.image.load(os.path.join(assets,'zombie_1.jpg'))
+        self.img = load_img(assets,'zombie_1.jpg')
         self.img_Lflip = pg.transform.flip(self.img,True,False)
         self.width, self.height = self.img.get_size()
         self.rect = self.img.get_rect()
@@ -522,11 +516,11 @@ class Zombie_melee():
         self.x , self.y = 0,0
         self.die = False #사운드용
         #크래시박스
-        self.crashbox = pg.image.load(os.path.join(assets,'zombie_1_crashbox.png'))
+        self.crashbox = load_img(assets,'zombie_1_crashbox.png')
         self.c_rect = self.crashbox.get_rect()
         self.c_width,self.h_height = self.crashbox.get_size()
         #플레이어 데미지 표시
-        self.ph_e_img = pg.image.load(os.path.join(assets,'player_hurt.png'))
+        self.ph_e_img = load_img(assets,'player_hurt.png')
         self.ph_e_appear = False
         self.ph_e_transparent_initval = 150
         self.ph_e_transparent = self.ph_e_transparent_initval
@@ -641,7 +635,7 @@ class Zombie_melee():
 class Zombie_shoot():
     def __init__(self):
         #zombie
-        self.img = pg.image.load(os.path.join(assets,'zombie_2.jpg'))
+        self.img = load_img(assets,'zombie_2.jpg')
         self.width, self.height = self.img.get_size()
         self.rect = self.img.get_rect()
         self.speed = 2
@@ -653,13 +647,13 @@ class Zombie_shoot():
         self.x, self.y = 0,0
         self.die = False #사운드용
         #bullet
-        self.b_img = pg.image.load(os.path.join(assets,'zombie_bullet.png'))
+        self.b_img = load_img(assets,'zombie_bullet.png')
         self.b_rect = self.b_img.get_rect()
         self.b_width, self.b_height = self.b_img.get_size()
         self.b_speed = 7
         self.shooting_time = zombie_shoot_shooting_time
         #플레이어 데미지 표시
-        self.ph_e_img = pg.image.load(os.path.join(assets,'player_hurt.png'))
+        self.ph_e_img = load_img(assets,'zombie_bullet.png')
         self.ph_e_appear = False
         self.ph_e_transparent_initval = 150
         self.ph_e_transparent = self.ph_e_transparent_initval
@@ -852,14 +846,13 @@ def Game():
         bomb.update()
         
         #사운드 (wave사운드는 맨 Wave함수와 묶음)
-        bullet.sound(0.1/volume_modify_max*volume_modify)
-        upgrade.sound(2/volume_modify_max*volume_modify)
-        bomb.sound(0.4/volume_modify_max*volume_modify)
-        knife.sound(0.3/volume_modify_max*volume_modify)
-        zombie_shoot.sound(0.5/volume_modify_max*volume_modify,0.5/volume_modify_max*volume_modify\
-                            ,0.3/volume_modify_max*volume_modify)
-        zombie_melee.sound(0.5/volume_modify_max*volume_modify, 0.3/volume_modify_max*volume_modify)
-        player.sound(0.4/volume_modify_max*volume_modify)
+        bullet.sound(sound_set(0.1))
+        upgrade.sound(sound_set(2))
+        bomb.sound(sound_set(0.4))
+        knife.sound(sound_set(0.3))
+        zombie_shoot.sound(sound_set(0.5),sound_set(0.5),sound_set(0.3))
+        zombie_melee.sound(sound_set(0.5), sound_set(0.3))
+        player.sound(sound_set(0.4))
     
     #그리기
     bullet.draw()
@@ -1212,11 +1205,11 @@ if __name__ == '__main__':
 
         mouse_x, mouse_y = pg.mouse.get_pos()
 
-        Wave(0.7/volume_modify_max*volume_modify)
+        Wave(sound_set(0.7))
         if not player.health <= 0:
             Game() 
         upgrade.update(card_num)
-        GameOver(1.7/volume_modify_max*volume_modify)
+        GameOver(sound_set(1.7))
         Crash_Zombie(zombie_melee,zombie_shoot)
         
         pg.display.flip()
