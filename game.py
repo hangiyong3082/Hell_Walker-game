@@ -18,7 +18,7 @@ pg.display.set_caption("Hell Walker")
 
 background_color = (40,40,40)
 black = (0,0,0)
-set_color = (0,0,0)
+set_color = (255, 59, 152)
 
 clock = pg.time.Clock()
 done = False
@@ -38,16 +38,30 @@ def load_img(path,img):  #이미지 함수
     return pg.image.load(os.path.join(path,img))
 
 #폰트
-gamefont = 'nanumgothic'
-for i in pg.font.get_fonts():
-    if i == '한컴산뜻돋움':
-        gamefont = '한컴산뜻돋움'
+gamefont = ['한컴산뜻돋움','nanumgothic','hy견고딕','gulim']
+for f in gamefont:
+    for i in pg.font.get_fonts():
+        if f == i:
+            try:gamefont = gamefont[gamefont.index(f)]
+            except:pass
+            break
         
 #텍스트 함수
 def Text(font,size,bold,italic,contents,antialias,color):
     font = pg.font.SysFont(font,size,bold,italic)
     text = font.render(contents,antialias,color)
     return text
+
+#마우스와 스프라이트 충돌 (if문 조건절에 사용해야됨)
+def collide_with_mouse(mouse_x,mouse_y,sprite_x,sprite_y,sprite_width,sprtie_height):
+    return sprite_x <= mouse_x <= sprite_x + sprite_width \
+            and sprite_y <= mouse_y <= sprite_y + sprtie_height
+
+#사운드
+def Sound(path,file,volume):
+    sound = pg.mixer.Sound(os.path.join(path,file))
+    pg.mixer.Sound.set_volume(sound, volume)
+    sound.play()
 
 #전역 변수
     #파일
@@ -104,14 +118,17 @@ special_weapon_have = 3
     #최대체력
 max_health = 5
     #업그레이드
-DoingUpgrade = False
 card_num = random.randint(2,3)
     #사운드
 volume_modify_max = 10
-volume_modify = 3
+volume_modify = 5
 gameover_sound_play = 0
+    #메뉴
+main_menu = True
+    #게임
+Pause = False
 
-def sound_set(proportion_sound):  #사운드 함수
+def set_sound(proportion_sound):  #사운드 함수
     return proportion_sound/volume_modify_max*volume_modify
 
 #플레이어
@@ -254,6 +271,7 @@ class Target_mouse():
             screen.blit(self.img, [mouse_x-self.width/2,mouse_y-self.height/2])            
         else:
             pg.mouse.set_visible(True)
+
 #총알
 class Bullet():
     def __init__(self):
@@ -391,7 +409,7 @@ class Knife():
     def update(self):
         self.Atteck()   
 
-#특수무기(수류탄)-------------------------------------------------------------------------------------------------
+#특수무기(수류탄)
 class Bomb():
     def __init__(self):
         self.img = load_img(assets,'bomb.png')
@@ -831,67 +849,68 @@ def Click(u):
 
     #게임
 def Game():
-    global wave_time,DoingUpgrade
-    if DoingUpgrade == False:
-        #시간
-        Timegoing()
-        #업데이트
-        player.update()
-        atteck_dir.update()
-        target_mouse.update()
-        bullet.update() 
-        knife.update()
-        zombie_melee.update()
-        zombie_shoot.update()
-        bomb.update()
+    global wave_time,Pause
+    if main_menu == False:
+        if Pause == False:
+            #시간
+            Timegoing()
+            #업데이트
+            player.update()
+            atteck_dir.update()
+            target_mouse.update()
+            bullet.update() 
+            knife.update()
+            zombie_melee.update()
+            zombie_shoot.update()
+            bomb.update()
+            
+            #사운드 (wave사운드는 맨 Wave함수와 묶음)
+            bullet.sound(set_sound(0.1))
+            upgrade.sound(set_sound(2))
+            bomb.sound(set_sound(0.4))
+            knife.sound(set_sound(0.3))
+            zombie_shoot.sound(set_sound(0.5),set_sound(0.5),set_sound(0.3))
+            zombie_melee.sound(set_sound(0.5), set_sound(0.3))
+            player.sound(set_sound(0.4))
         
-        #사운드 (wave사운드는 맨 Wave함수와 묶음)
-        bullet.sound(sound_set(0.1))
-        upgrade.sound(sound_set(2))
-        bomb.sound(sound_set(0.4))
-        knife.sound(sound_set(0.3))
-        zombie_shoot.sound(sound_set(0.5),sound_set(0.5),sound_set(0.3))
-        zombie_melee.sound(sound_set(0.5), sound_set(0.3))
-        player.sound(sound_set(0.4))
-    
-    #그리기
-    bullet.draw()
-    atteck_dir.draw()
-    zombie_shoot.draw()
-    player.draw()
-    zombie_melee.player_hurt_effect()
-    zombie_shoot.player_hurt_effect()
-    zombie_melee.draw()
-    knife.draw()
-    bomb.draw()
-    
-    #클릭
-    Click(upgrade)
+        #그리기
+        bullet.draw()
+        atteck_dir.draw()
+        zombie_shoot.draw()
+        player.draw()
+        zombie_melee.player_hurt_effect()
+        zombie_shoot.player_hurt_effect()
+        zombie_melee.draw()
+        knife.draw()
+        bomb.draw()
+        
+        #클릭
+        Click(upgrade)
 
-    #UI바
-    pg.draw.rect(screen,(0,0,0),[0,0,screen_width,UIbar_height],0)
-    pg.draw.rect(screen,(255,80,199),[0,0,screen_width,UIbar_height],3)
-    #체력
-    text_health = Text(gamefont, 50, False, False,f"체력 : {player.health:0.1f}/{max_health}", True, (255,72,199))
-    screen.blit(text_health, (screen_width/2-(text_health.get_rect())[2]/2,50))
-    #칼 쿨타임
-    text_k_cooltime = Text(gamefont, 30, False, True,f"칼 쿨타임 : {knife.atteck_term/60:0.2f}", True, (243,97,220))
-    screen.blit(text_k_cooltime, (800,30))
-    #수류탄 개수
-    text_bomb = Text(gamefont, 30, False, True,f"수류탄 개수 : {special_weapon_have}", True, (255,97,166))
-    screen.blit(text_bomb, (800,75))
-    #웨이브
-    text_wave = Text(gamefont, 30, False, True,f"wave : {wave}", True, (255,36,163))
-    screen.blit(text_wave, (220,30))
-    #점수
-    text_score = Text(gamefont, 30, False, True,f"점수 : {score}", True, (110,227,247))
-    screen.blit(text_score, (220,80))
-    #웨이브 시간
-    text_wavetime = Text(gamefont, 20, False, False,f"웨이브 시간 {wave_time//60}", True, (255,255,255))
-    screen.blit(text_wavetime, (screen_width/2-(text_wavetime.get_rect())[2]/2,20))
-    #남은 좀비 수
-    text_zombie_left = Text(gamefont, 18, False, False, f"남은 좀비 수 {int(Z_left)}", True, (71,200,62))
-    screen.blit(text_zombie_left, (screen_width/2-(text_zombie_left.get_rect())[2]/2,110))
+        #UI바
+        pg.draw.rect(screen,(0,0,0),[0,0,screen_width,UIbar_height],0)
+        pg.draw.rect(screen,set_color,[0,0,screen_width,UIbar_height],3)
+        #체력
+        text_health = Text(gamefont, 50, False, False,f"체력 : {player.health:0.1f}/{max_health}", True, (254, 46, 66))
+        screen.blit(text_health, (screen_width/2-(text_health.get_rect())[2]/2,50))
+        #칼 쿨타임
+        text_k_cooltime = Text(gamefont, 30, False, True,f"칼 쿨타임 : {knife.atteck_term/60:0.2f}", True, (126, 222, 226))
+        screen.blit(text_k_cooltime, (800,30))
+        #수류탄 개수
+        text_bomb = Text(gamefont, 30, False, True,f"수류탄 개수 : {special_weapon_have}", True, (10, 138, 124))
+        screen.blit(text_bomb, (800,75))
+        #웨이브
+        text_wave = Text(gamefont, 30, False, True,f"wave : {wave}", True, set_color)
+        screen.blit(text_wave, (220,30))
+        #점수
+        text_score = Text(gamefont, 30, False, True,f"점수 : {score}", True, (243, 240, 108))
+        screen.blit(text_score, (220,80))
+        #웨이브 시간
+        text_wavetime = Text(gamefont, 20, False, False,f"웨이브 시간 {wave_time//60}", True, (255,255,255))
+        screen.blit(text_wavetime, (screen_width/2-(text_wavetime.get_rect())[2]/2,20))
+        #남은 좀비 수
+        text_zombie_left = Text(gamefont, 18, False, False, f"남은 좀비 수 {int(Z_left)}", True, (71,200,62))
+        screen.blit(text_zombie_left, (screen_width/2-(text_zombie_left.get_rect())[2]/2,110))
 
 def Wave(volume):
     global wave, wave_time, wave_killzombie, wave_fontalpha, zm_spawn, zs_spawn, zm_spawncount, zs_spawncount\
@@ -902,7 +921,7 @@ def Wave(volume):
         if between_wave > 0:
             between_wave -= 1
         else:
-            if DoingUpgrade == False:
+            if Pause == False:
                 wave += 1
                 between_wave = 60
                 wave_fontdraw = True
@@ -933,7 +952,7 @@ def Wave(volume):
         wave_fontalpha -= 2.3
 
         #웨이브 알림
-        text_wave = Text('Times new Roman',150, True, False,f"WAVE {wave}", True, (255,36,163))
+        text_wave = Text('Times new Roman',150, True, False,f"WAVE {wave}", True, set_color)
         text_wave.set_alpha(wave_fontalpha)
         screen.blit(text_wave,(screen_width/2-(text_wave.get_rect())[2]/2,screen_height/2-(text_wave.get_rect())[1]/2))
     else:
@@ -981,12 +1000,12 @@ class Upgrade():
                 self.card.append(get_random)
 
     def select_process(self,card_num):
-        global between_wave,DoingUpgrade,special_weapon
+        global between_wave,Pause,special_weapon
        
         if between_wave <= 0:
-            DoingUpgrade = True
+            Pause = True
 
-        if DoingUpgrade == True:
+        if Pause == True:
             pg.mouse.set_visible(True)          
 
             if card_num == 2:
@@ -997,7 +1016,7 @@ class Upgrade():
                     if self.pressing_mouse:  #Game -> Click
                         for c in self.pos:        
                             if c[0] <= mouse_x <= c[0]+self.width and c[1] <= mouse_y <= c[1]+self.height:
-                                DoingUpgrade = False
+                                Pause = False
                                 self.select_card = self.card[self.pos.index(c)]
                                 knife.cooltime = 0
                                 self.pos.clear()    
@@ -1012,7 +1031,7 @@ class Upgrade():
                     if self.pressing_mouse:  #Game -> Click
                         for c in self.pos:        
                             if c[0] <= mouse_x <= c[0]+self.width and c[1] <= mouse_y <= c[1]+self.height:
-                                DoingUpgrade = False
+                                Pause = False
                                 self.select_card = self.card[self.pos.index(c)]
                                 knife.cooltime = 0
                                 self.pos.clear()    
@@ -1080,7 +1099,7 @@ class Upgrade():
 
         for c in self.pos: 
             pg.draw.rect(screen,(0,0,0),[c[0],c[1],self.width,self.height],0)   
-            pg.draw.rect(screen,(255,80,199),[c[0],c[1],self.width,self.height],3)
+            pg.draw.rect(screen,set_color,[c[0],c[1],self.width,self.height],3)
            
         for cd in self.card:
             cd_index = self.card.index(cd)
@@ -1135,6 +1154,109 @@ def GameOver(volume):
 
         pg.mouse.set_visible(True)
 
+class Main_Menu():
+    def __init__(self):
+        #타이틀
+            #이미지
+        self.title_img = load_img(assets,'menu_title.png')
+        self.title_glow = load_img(assets,'menu_title_glow.png')
+            #이미지 크기
+        self.title_width,self.title_height = self.title_img.get_size()
+
+        #값 수정 버튼
+            #이미지  (위쪽 화살표가 기본 이미지)
+        self.modify_img = load_img(assets, 'volume_up.png') # v : volume
+        self.modify_img_flip = pg.transform.flip(self.modify_img,False,True)
+            #이미지 크기
+        self.modify_img_width,self.modify_img_height = self.modify_img.get_size()
+
+        #볼륨
+            #설명
+        self.v_text = Text(gamefont,30,False,False,'음량설정',True,(255,255,255))
+        self.v_text_width,self.v_text_height = self.v_text.get_size()
+            #설명과 이미지의 거리
+        self.v_space = 30
+            #설명 좌표
+        self.v_text_x = (screen_width -self.v_text_width -self.modify_img_width -self.v_space)/2
+        self.v_text_y = self.title_img.get_size()[1]+100
+            #이미지 사이의 거리
+        self.v_img_space = 90
+            #이미지 좌표
+        self.v_img_x = self.v_text_x + self.v_text_width + self.v_space
+        self.v_img_up_y = self.v_text_y + (self.v_text_height - self.modify_img_height)/2 - self.v_img_space/2
+        self.v_img_down_y = self.v_text_y + (self.v_text_height - self.modify_img_height)/2 + self.v_img_space/2
+            #음량 값 텍스트
+        self.v_text_num = Text(gamefont,25,False,False,f"{volume_modify}",True,(255,255,255))
+        self.v_text_num_width,self.v_text_num_height = self.v_text_num.get_size()
+            #음량 값 좌표
+        self.v_text_num_x = self.v_img_x + (self.modify_img_width-self.v_text_num_width)/2
+        self.v_text_num_y = self.v_text_y + (self.modify_img_height-self.v_text_num_height)/2
+
+        #시작 버튼
+            #설명
+        self.s_text = Text(gamefont,40,False,True,'시작!',True,(255,255,255))
+        self.s_text_width,self.s_text_height = self.s_text.get_size()
+            #설명 좌표
+        self.s_text_x = (screen_width -self.s_text_width)/2
+        self.s_text_y = self.title_img.get_size()[1]+400
+            #텍스트와 차이나는 박스 길이
+        self.s_box_distance_x = 200
+        self.s_box_distance_y = 30
+            #박스 좌표
+        self.s_box_x = self.s_text_x - self.s_box_distance_x
+        self.s_box_y = self.s_text_y - self.s_box_distance_y
+            #박스 길이
+        self.s_box_long_x = self.s_box_distance_x*2+self.s_text_width
+        self.s_box_long_y = self.s_box_distance_y*2+self.s_text_height
+
+    def draw(self):
+        #배경
+        screen.fill(black)
+        pg.draw.rect(screen,set_color,(0,0,screen_width,screen_height+UIbar_height),5)
+        #타이틀
+        screen.blit(self.title_glow,((screen_width-self.title_width)/2,0))
+        screen.blit(self.title_img,((screen_width-self.title_width)/2,0))
+        #경계
+        pg.draw.line(screen,set_color,(50,self.title_height),(screen_width-50,self.title_height),5)
+        #볼륨 설정
+            #설명
+        screen.blit(self.v_text,(self.v_text_x,self.v_text_y))
+            #이미지
+        screen.blit(self.modify_img,(self.v_img_x,self.v_img_up_y))
+        screen.blit(self.modify_img_flip,(self.v_img_x,self.v_img_down_y))
+            #음량 값
+        screen.blit(self.v_text_num,(self.v_text_num_x,self.v_text_num_y))
+        #시작 버튼
+            #설명
+        screen.blit(self.s_text,(self.s_text_x,self.s_text_y))
+            #박스
+        pg.draw.rect(screen,(196, 193, 0),(self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y),3)
+
+    def click(self):
+        global volume_modify,volume_modify_max,main_menu
+        mouse_x = pg.mouse.get_pos()[0]
+        mouse_y = pg.mouse.get_pos()[1]
+        #메인 메뉴
+        if main_menu:
+            #음량 설정
+            if collide_with_mouse(mouse_x,mouse_y,self.v_img_x,self.v_img_up_y,self.modify_img_width,self.modify_img_height):
+                if volume_modify < volume_modify_max:
+                    volume_modify += 1
+                    Sound(assets,'volume_setting.wav',set_sound(0.7))
+
+            elif collide_with_mouse(mouse_x,mouse_y,self.v_img_x,self.v_img_down_y,self.modify_img_width,self.modify_img_height):
+                if volume_modify > 0:
+                    volume_modify -= 1
+                    Sound(assets,'volume_setting.wav',set_sound(0.7))
+            #시작 버튼
+            if collide_with_mouse(mouse_x,mouse_y,self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y):
+                Sound(assets,'game_start.wav',set_sound(0.8))
+                main_menu = False
+
+    def update(self):
+        #음량 값
+        self.v_text_num = Text(gamefont,25,False,False,f"{volume_modify}",True,(255,255,255))
+
 #클래스 설정   
 player = Player()
 atteck_dir = Atteck_dir()
@@ -1145,6 +1267,7 @@ zombie_melee = Zombie_melee()
 zombie_shoot = Zombie_shoot()
 bomb = Bomb()
 upgrade = Upgrade()
+main_menu = Main_Menu()
 
 if __name__ == '__main__':
     while not done:
@@ -1192,6 +1315,10 @@ if __name__ == '__main__':
                     press_down = False
                     if press_up == True:
                         press_y_list.append(-player.speed)
+                        
+            if event.type == pg.MOUSEBUTTONUP and event.button == pg.BUTTON_LEFT:
+                if main_menu:
+                    main_menu.click()
 
         if pg.mouse.get_pressed()[0] == True:
             click_left = True
@@ -1205,12 +1332,16 @@ if __name__ == '__main__':
 
         mouse_x, mouse_y = pg.mouse.get_pos()
 
-        Wave(sound_set(0.7))
-        if not player.health <= 0:
-            Game() 
-        upgrade.update(card_num)
-        GameOver(sound_set(1.7))
-        Crash_Zombie(zombie_melee,zombie_shoot)
+        if not main_menu: 
+            Wave(set_sound(0.7))
+            if not player.health <= 0:
+                Game() 
+            upgrade.update(card_num)
+            GameOver(set_sound(1.7))
+            Crash_Zombie(zombie_melee,zombie_shoot)
+        else: #메인 메뉴
+            main_menu.draw()
+            main_menu.update()
         
         pg.display.flip()
         clock.tick(60)
