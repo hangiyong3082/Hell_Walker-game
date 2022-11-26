@@ -16,8 +16,9 @@ UIbar_height = 150
 screen = pg.display.set_mode([screen_width,screen_height+UIbar_height])
 pg.display.set_caption("Hell Walker")
 
-background_color = (40,40,40)
+background_color = (30,30,30)
 black = (0,0,0)
+white = (255,255,255)
 set_color = (255, 59, 152)
 
 clock = pg.time.Clock()
@@ -47,7 +48,7 @@ for f in gamefont:
             break
         
 #텍스트 함수
-def text_set(font,size,bold,italic,contents,antialias,color):
+def text_set(font,size,bold,italic,contents:str,antialias,color):
     font = pg.font.SysFont(font,size,bold,italic)
     text = font.render(contents,antialias,color)
     return text
@@ -69,6 +70,14 @@ def rect_alpha(width,height,color,alpha):
     box.set_alpha(alpha)                
     box.fill(color)        
     return box
+
+#가운데 배치
+def middle(standard_vector,standard_width,object_width):
+    return standard_vector+(standard_width-object_width)/2
+
+#사운드 함수
+def set_sound(proportion_sound):  
+    return proportion_sound/volume_modify_max*volume_modify
 
 #전역 변수
     #파일
@@ -133,13 +142,13 @@ volume_modify_max = 10
 volume_modify = 5
 gameover_sound_play = 0
     #메뉴
-main_menu = True
+main_menu_bool = True
     #게임
-Pause = False
 Graphic = 1 # 0:저품질 1:고품질
-
-def set_sound(proportion_sound):  #사운드 함수
-    return proportion_sound/volume_modify_max*volume_modify
+ResetGame = False
+FPS = 60
+fps_proportion = 60/FPS
+lg = 0 #language 0:eng 1:kr
 
 #플레이어
 class Player(pg.sprite.Sprite):
@@ -152,8 +161,9 @@ class Player(pg.sprite.Sprite):
         self.x = screen_width/2-self.width/2
         self.y = screen_height/2-self.height/2+UIbar_height
         self.health = max_health
-        self.nomal_speed = 2.7
-        self.speed = self.nomal_speed
+        self.speed_init = 2.7
+        self.normal_speed = self.speed_init
+        self.speed = self.normal_speed
         self.sprites = []
         self.walk_sound_initval = 25  #사운드용
         self.walk_sound = self.walk_sound_initval
@@ -162,12 +172,15 @@ class Player(pg.sprite.Sprite):
         self.hitbox = load_img(assets,'player_hitbox.png')
         self.h_rect = self.hitbox.get_rect()
         self.h_width,self.h_height = self.hitbox.get_size()
+        #체력 적을 때
+        self.AlmostDie_img = load_img(assets,'AlmostDie.png')
+        self.AlmostDie_width,self.AlmostDie_height = self.AlmostDie_img.get_size()
 
     def move(self):
         #좌우 방향키와 상하 방향키를 같이 누른다면 속도 감소
-        self.decrease_speed = self.nomal_speed - 0.5
+        self.decrease_speed = self.normal_speed - 0.5
         if len(press_x_list) != 0 and len(press_y_list) != 0:
-            self.speed = self.decrease_speed
+            self.speed = self.decrease_speed*fps_proportion
             if press_x_list[-1] < 0:
                 press_x_list[-1] = self.speed*-1
             else:
@@ -177,7 +190,8 @@ class Player(pg.sprite.Sprite):
             else:
                 press_y_list[-1] = self.speed
         else:
-            self.speed += self.nomal_speed - self.speed
+            self.speed += self.normal_speed - self.speed
+            self.speed *= fps_proportion
             try:
                 if len(press_x_list) != 0:
                     if press_x_list[-1] < 0:
@@ -217,6 +231,10 @@ class Player(pg.sprite.Sprite):
     def draw(self):
         screen.blit(self.img,[self.x,self.y])
 
+        if self.health <= 1:
+            screen.blit(self.AlmostDie_img,(middle(self.x,self.width,self.AlmostDie_width),\
+                                                middle(self.y,self.height,self.AlmostDie_height)))
+
     def sound(self,volume):
         if len(press_x_list) != 0 or len(press_y_list) != 0:
             self.move_condition = True
@@ -245,10 +263,10 @@ class Player(pg.sprite.Sprite):
         self.h_y = self.y + (self.height-self.h_height)/2
         self.h_rect.topleft = (self.centerx,self.centery)
 
-#체력이 적을 때 효과
+#체력이 적을 때 화면 흐리게
 def Almostdie():  
     if player.health <= 1:
-        screen.blit(rect_alpha(screen_width,screen_height+UIbar_height,(255,0,0),30),[0,0])
+        screen.blit(rect_alpha(screen_width,screen_height+UIbar_height,(0,0,0),100),[0,0])
 
 #맞았을 때 화면 전체적으로 효과
 class PlayerHurt():
@@ -324,6 +342,8 @@ class Bullet():
                 zombie_melee.rect.topleft = (Zm[0],Zm[1])
                 if zombie_melee.rect.colliderect(self.rect):
                     Zm[5] -= 1
+                    if Zm[5] > 0:
+                        blood_splash.spawn(Zm[0],Zm[1],3,4)
                     try:
                         self.list.remove(B)
                     except:pass
@@ -438,6 +458,7 @@ class Knife():
             knife_sound = pg.mixer.Sound(os.path.join(assets,'knife_sound.wav'))
             pg.mixer.Sound.set_volume(knife_sound, volume)
             knife_sound.play()
+
             self.swing = False
 
     def update(self):
@@ -570,6 +591,8 @@ class Zombie_melee():
         self.spawntime = zombie_melee_spawntime
         self.x , self.y = 0,0
         self.die = False #사운드용
+        #체력 표시
+        self.HealthText_list = []
         #크래시박스
         self.crashbox = load_img(assets,'zombie_1_crashbox.png')
         self.c_rect = self.crashbox.get_rect()
@@ -605,11 +628,11 @@ class Zombie_melee():
                 self.dx = 0
                 self.dy = 0
                 self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,
-                                    self.crash_player_time,random.choice([True,False])])
+                                    self.crash_player_time,random.choice([True,False]),0,0,0])
                                 # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] crash_player_time[6]
-                                    #Lflip?[7]
+                                    #Lflip?:[7] HealthText_set:[8] HealthText_x,y:[9],[10] 
                 self.spawntime = 1000//zm_spawn
-                zm_spawncount -= 1
+                zm_spawncount -= 1*fps_proportion
                 
                 #만약 무한모드라면
                 '''zm_count += 1'''
@@ -617,8 +640,8 @@ class Zombie_melee():
 
     def Atteck_Die(self):
         global score, wave_killzombie,Z_left,zombie_blood_list
-        #atteck
         for Zmp in self.list:
+            #atteck
             Zmp_rect = self.img.get_rect()
             Zmp_rect.topleft = (Zmp[0],Zmp[1])
             if Zmp_rect.colliderect(player.h_rect):
@@ -637,19 +660,27 @@ class Zombie_melee():
                 self.die = True
                 self.list.remove(Zmp)
                 zombie_blood.list.append([Zmp[0]-(zombie_blood.width-self.width)/2,Zmp[1]+25,zombie_blood.ShowingTime])
-                blood_splash.spawn(Zmp[0],Zmp[1])
+                blood_splash.spawn(Zmp[0],Zmp[1],7,1.7)
                 score += 100
                 wave_killzombie += 1
                 Z_left -= 1
-    def move(self):
+
+    def move(self):   
         for Zm in self.list:
-            #move
             Zm[0] += Zm[2] 
             Zm[1] += Zm[3]
             Zm[4] = math.atan2(player.y-Zm[1],player.x-Zm[0])
-            Zm[2] = math.cos(Zm[4])*self.speed
-            Zm[3] = math.sin(Zm[4])*self.speed           
-    
+            Zm[2] = math.cos(Zm[4])*self.speed*fps_proportion
+            Zm[3] = math.sin(Zm[4])*self.speed*fps_proportion   
+
+    def HealthText(self):
+        #순서대로 실행 돼야함
+        for zm in self.list:
+            zm[8] = text_set(gamefont,15,False,False,'[]' if zm[5]>1 else '',False,white)
+            text_width,text_height = zm[8].get_size()
+            zm[9] = zm[0]
+            zm[10] = zm[1]
+                
     def draw(self):
         global Graphic
         
@@ -664,6 +695,8 @@ class Zombie_melee():
                     pg.draw.rect(screen,(5, 167, 0),(Zm[0],Zm[1],self.width,self.height))
                 else:
                     screen.blit(self.img,(Zm[0],Zm[1]))
+    
+            screen.blit(Zm[8],(Zm[9],Zm[10]))
 
     def sound(self,volume_die,volume_ph):
         if self.die:
@@ -671,6 +704,7 @@ class Zombie_melee():
             pg.mixer.Sound.set_volume(zombie_die_sound, volume_die)
             zombie_die_sound.play()
             self.die = False
+
         if self.ph_sound:
             ph_sound = pg.mixer.Sound(os.path.join(assets,'player_hurt_sound.wav'))
             pg.mixer.Sound.set_volume(ph_sound, volume_ph)
@@ -682,7 +716,7 @@ class Zombie_melee():
             if self.ph_e_transparent > 0:
                 self.ph_e_img.set_alpha(self.ph_e_transparent)
                 screen.blit(self.ph_e_img,(player.x,player.y))
-                self.ph_e_transparent -= 2
+                self.ph_e_transparent -= 2*fps_proportion
             else:
                 self.ph_e_transparent = self.ph_e_transparent_initval
                 self.ph_e_img.set_alpha(self.ph_e_transparent)
@@ -690,8 +724,9 @@ class Zombie_melee():
 
     def update(self):
         self.spawn()
-        self.Atteck_Die() 
-        self.move() 
+        self.move()
+        self.Atteck_Die()
+        self.HealthText()
 
         self.c_x = self.x + (self.width-self.c_width)/2
         self.c_y = self.y + (self.height-self.h_height)/2
@@ -751,7 +786,7 @@ class Zombie_shoot():
                 self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,self.bullet,self.shooting_time,self.crash])
                                 # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] bullet[6] shooting_time[7] crash[8]
                 self.spawntime = 1000//zs_spawn
-                zs_spawncount -= 1                
+                zs_spawncount -= 1*fps_proportion                
                 #만약 무한모드라면
                 '''zs_count += 1'''
         self.spawntime -= 1
@@ -781,7 +816,7 @@ class Zombie_shoot():
                 self.die = True
                 self.list.remove(Zs)
                 zombie_blood.list.append([Zs[0]-(zombie_blood.width-self.width)/2,Zs[1]+25,zombie_blood.ShowingTime])
-                blood_splash.spawn(Zs[0],Zs[1])
+                blood_splash.spawn(Zs[0],Zs[1],7,1.7)
                 score += 100
                 wave_killzombie += 1
                 Z_left -= 1
@@ -877,24 +912,27 @@ class ZombieBlood():
 class Particle():
     def __init__(self):
         self.object = []
+        self.color = (0,0,0)
         self.spawntime = 0
-        self.VisibleTime = 180
+        self.VisibleTime = 240
         self.MaxAlpha = 150
 
     def spawn(self):
-        if self.spawntime <= 0 and len(self.object) <= 10:
+        if self.spawntime <= 0 and len(self.object) <= 20:
             SideLength = random.randint(5,7)
             x_pos = random.randint(0,screen_width-SideLength)
             y_pos = random.randint(UIbar_height,screen_height-SideLength)
             dx = random.randrange(-100,100)/100
             dy = random.randrange(-100,100)/100
+            c = random.randint(0,189)
+            color = (c,c,c)
             self.spawntime = random.randint(0,30)
-            self.object.append([x_pos,y_pos,dx,dy,self.VisibleTime,0,SideLength])
+            self.object.append([x_pos,y_pos,dx,dy,self.VisibleTime,0,SideLength,color])
         self.spawntime -= 1
     
     def draw(self):
         for i in self.object:
-            particle = rect_alpha(i[6],i[6],(189,189,189),i[5])
+            particle = rect_alpha(i[6],i[6],i[7],i[5])
             screen.blit(particle,(i[0],i[1]))
 
     def move(self,i):
@@ -925,31 +963,35 @@ class BloodSplash():
         self.SubtractionDegree = 0.1
         self.zombie_die = False
 
-    def spawn(self,zombie_x,zombie_y):
+    def spawn(self,zombie_x,zombie_y,amount,speed): #speed : 맞았을 때 1 죽었을 때 2
         self.object.append([])
-        for i in range(0,3):
+        for i in range(0,amount):
             self.object[-1].append([zombie_x+(30-self.SideLength)/2,zombie_y+(30-self.SideLength)/2,\
-                        random.randint(-100,100)/100,random.randint(-350,-200)/100,zombie_y+30])
+                        random.randint(-100,100)/100,random.randint(-450,-200)/100,zombie_y+30,speed])
 
     def draw(self):
         for I in self.object:
             for i in I:
                 pg.draw.rect(screen,self.color,(i[0],i[1],self.SideLength,self.SideLength))
 
-    def move(self,i):
-        i[0] += i[2]
-        i[1] += i[3]
-        i[3] += self.SubtractionDegree
-
-    def delete(self,I,i):
-        if i[1] > i[4]:
-            I.remove(i)
-
-    def update(self):
+    def move(self):
         for I in self.object:
             for i in I:
-                self.move(i)
-                self.delete(I,i)
+                i[0] += i[2]
+                i[1] += i[3]
+                i[3] += self.SubtractionDegree*i[5]
+
+    def delete(self):
+        for I in self.object:
+            for i in I:
+                if i[1] > i[4]:
+                    I.remove(i)
+            if len(I) == 0:
+                self.object.remove(I)
+
+    def update(self):
+        self.move()
+        self.delete()
 
 #좀비 충돌
 def Crash_Zombie(zm,zs):
@@ -962,13 +1004,19 @@ def Crash_Zombie(zm,zs):
                     Zm1_rect.topleft,Zm2_rect.topleft = (Zm1[0],Zm1[1]), (Zm2[0],Zm2[1])
                     if Zm1_rect.colliderect(Zm2_rect):
                         Zm1_angle = math.atan2(Zm1[1]-Zm2[1],Zm1[0]-Zm1[0]) #math.cos또는sin(Zm1_angle)*zm.speed
+
+                        ZombieCrash_RandomMove = random.choice([0,1]) #랜덤 움직임 정하는 값
+
+                        ZombieCrashMove_x = math.cos(Zm1_angle)*zm.speed*2
+                        ZombieCrashMove_y = math.sin(Zm1_angle)*zm.speed*2
+
                         if math.dist((Zm1[0],Zm1[1]),(player.x , player.y)) \
                             < math.dist((Zm2[0],Zm2[1]),(player.x , player.y)):
-                            Zm2[2] = -math.cos(Zm1_angle)*zm.speed
-                            Zm2[3] = -math.sin(Zm1_angle)*zm.speed                  
+                            Zm2[2] *= -1 if ZombieCrash_RandomMove == 0 else 1
+                            Zm2[3] *= -1 if ZombieCrash_RandomMove == 0 else 1
                         else: 
-                            Zm1[2]= math.cos(Zm1_angle)*zm.speed
-                            Zm1[3]= math.cos(Zm1_angle)*zm.speed
+                            Zm1[2] *= -1 if ZombieCrash_RandomMove == 0 else 1
+                            Zm1[3] *= -1 if ZombieCrash_RandomMove == 0 else 1
                 b_index += 1
             b_index = 0
             a_index += 1 
@@ -1012,8 +1060,8 @@ def Click(u):
 #게임
 def Game():
     global wave_time,Upgrading
-    if main_menu == False:
-        if Upgrading == False and Pause == False:
+    if main_menu_bool == False:
+        if Upgrading == False and pause.bool == False:
             #시간
             #Timegoing()
             #업데이트
@@ -1087,6 +1135,10 @@ def Game():
         #맞았을 때 효과
         player_hurt.effect()
 
+        #일시정지 메뉴
+        if pause.bool == True:
+            pause.draw()
+
 #웨이브
 def Wave(volume):
     global wave, wave_time, wave_killzombie, wave_fontalpha, zm_spawn, zs_spawn, zm_spawncount, zs_spawncount\
@@ -1095,6 +1147,9 @@ def Wave(volume):
 
     if wave_time == 0 or Z_left == 0:
         if between_wave > 0:
+            if wave == 0:
+                zombie_melee.list.clear()
+                zombie_shoot.list.clear()
             between_wave -= 1
         else:
             if Upgrading == False:
@@ -1249,8 +1304,9 @@ class Upgrade():
         elif sc == 6: #최대 체력 증가
             sc6 = 1
             if self.health_level < self.maxlevel:
-                player.health += (max_health/player.health)*sc6
+                health_percent = player.health/max_health
                 max_health += sc6
+                player.health = max_health*health_percent
                 self.health_level += 1
             else:  #레벨이 최대일 때
                 special_weapon_have += 1
@@ -1258,7 +1314,7 @@ class Upgrade():
             sc7 = 0.3
             if self.speed_level < self.maxlevel:
                 self.speed_level += 1
-                player.nomal_speed += sc7
+                player.normal_speed += sc7
             else:
                 special_weapon_have += 1
 
@@ -1309,9 +1365,11 @@ class Upgrade():
 def GameOver(volume):
     global special_weapon,gameover_sound_play
     if player.health <= 0:
-        screen.fill(black)
+        screen.fill((background_color))
+        #line
+        pg.draw.rect(screen,(204,61,61),(0,0,screen_width,screen_height+UIbar_height),7)
         #text
-        text_die_message = text_set(gamefont,30,False,True,"더 이상 버티지 못하였습니다...",True,(204,61,61))
+        text_die_message = text_set(gamefont,30,False,True,"더 이상 버티지 못하였습니다...",True,(180,180,180))
         screen.blit(text_die_message,(screen_width/2-(text_die_message.get_rect())[2]/2,UIbar_height+30))
         
         text_totalwave = text_set(gamefont, 70, False,False,f"wave : {wave}",True,set_color)
@@ -1332,7 +1390,96 @@ def GameOver(volume):
 
         pg.mouse.set_visible(True)
 
-#메뉴
+#일시정지 메뉴
+class Pause():
+    def __init__(self):
+        self.bool = False
+        self.restart = False
+        self.mainmenu = False
+        #색깔
+        self.board_color = black
+        self.boardLine_color = (189,189,189)
+        self.BoxLine_color = (255,255,255)
+        self.Box_color = (51,51,51)
+        #크기
+        self.board_width,self.board_height = 450, 340
+        self.RestartBox_width,self.RestartBox_height = 190, 70
+        self.MainmenuBox_width,self.MainmenuBox_height = 240, 70
+        #버튼끼리의 거리
+        self.box_space = 30
+        #좌표 (1.판 2.버튼)
+            #판
+        self.board_x = (screen_width-self.board_width)/2
+        self.board_y = (screen_height+UIbar_height-self.board_height)/2
+            #재시작 버튼
+        self.RestartBox_x = middle(self.board_x,self.board_width,self.RestartBox_width)
+        self.RestartBox_y = middle(self.board_y,self.board_height,self.RestartBox_height)-self.RestartBox_height/2-self.box_space/2
+            #메인메뉴 버튼
+        self.MainmenuBox_x = middle(self.board_x,self.board_width,self.MainmenuBox_width)
+        self.MainmenuBox_y = middle(self.board_y,self.board_height,self.MainmenuBox_height)+self.MainmenuBox_height/2+self.box_space/2
+
+        #텍스트 
+            #설정,크기
+        self.T_pause = text_set(gamefont,25,False,False,"일시정지",True,self.BoxLine_color)
+        self.T_pause_width,self.T_pause_height = self.T_pause.get_size()
+
+        self.T_Restart = text_set(gamefont,25,False,False,"재시작",True,(255,255,255))
+        self.T_Restart_width,self.T_Restart_height = self.T_Restart.get_size()
+
+        self.T_Mainmenu = text_set(gamefont,25,False,False,"메인 메뉴",True,(255,255,255))
+        self.T_Mainmenu_width,self.T_Mainmenu_height = self.T_Mainmenu.get_size()
+
+        self.T_description = text_set(gamefont,25,False,False,"ESC로 취소",True,(140,140,140))
+        self.T_description_width,self.T_description_height = self.T_description.get_size()
+            #좌표
+        self.T_pause_x = middle(self.board_x,self.board_width,self.T_pause_width)
+        self.T_pause_y = self.board_y+15
+
+        self.T_Restart_x = middle(self.RestartBox_x,self.RestartBox_width,self.T_Restart_width)
+        self.T_Restart_y = middle(self.RestartBox_y,self.RestartBox_height,self.T_Restart_height)
+
+        self.T_Mainmenu_x = middle(self.MainmenuBox_x,self.MainmenuBox_width,self.T_Mainmenu_width)
+        self.T_Mainmenu_y = middle(self.MainmenuBox_y,self.MainmenuBox_height,self.T_Mainmenu_height)
+
+        self.T_description_x = middle(self.board_x,self.board_width,self.T_description_width)
+        self.T_description_y = self.board_y+self.board_height-self.T_description_height-30
+
+    def draw(self):
+        #판
+        pg.draw.rect(screen,self.board_color,(self.board_x,self.board_y,self.board_width,self.board_height))
+        pg.draw.rect(screen,self.boardLine_color,(self.board_x,self.board_y,self.board_width,self.board_height),3)
+        #버튼 (박스)
+            #재시작
+        pg.draw.rect(screen,self.Box_color,(self.RestartBox_x,self.RestartBox_y,self.RestartBox_width,self.RestartBox_height))
+        pg.draw.rect(screen,self.BoxLine_color,(self.RestartBox_x,self.RestartBox_y,self.RestartBox_width,self.RestartBox_height),3)
+            #메인 메뉴
+        pg.draw.rect(screen,self.Box_color,(self.MainmenuBox_x,self.MainmenuBox_y,self.MainmenuBox_width,self.MainmenuBox_height))
+        pg.draw.rect(screen,self.BoxLine_color,(self.MainmenuBox_x,self.MainmenuBox_y,self.MainmenuBox_width,self.MainmenuBox_height),3)
+        #텍스트
+        screen.blit(self.T_pause,(self.T_pause_x,self.T_pause_y))
+        screen.blit(self.T_Restart,(self.T_Restart_x,self.T_Restart_y))
+        screen.blit(self.T_Mainmenu,(self.T_Mainmenu_x,self.T_Mainmenu_y))
+        screen.blit(self.T_description,(self.T_description_x,self.T_description_y))
+
+    def click(self):
+        global main_menu_bool,ResetGame
+
+        mouse_x = pg.mouse.get_pos()[0]
+        mouse_y = pg.mouse.get_pos()[1]
+
+        if collide_with_mouse(mouse_x,mouse_y,self.RestartBox_x,self.RestartBox_y,self.RestartBox_width,self.RestartBox_height):
+            ResetGame = True
+            self.bool = False
+            pg.mixer.stop()
+            Wave(set_sound(0.7))
+
+        if collide_with_mouse(mouse_x,mouse_y,self.MainmenuBox_x,self.MainmenuBox_y,self.MainmenuBox_width,self.MainmenuBox_height):
+            ResetGame = True
+            self.bool = False
+            pg.mixer.stop()
+            main_menu_bool = True
+
+#메뉴       
 class Main_Menu():
     def __init__(self):
         #타이틀
@@ -1350,9 +1497,11 @@ class Main_Menu():
             #이미지 크기
         self.modify_img_width,self.modify_img_height = self.modify_img.get_size()
 
+
         #볼륨  (v : volume)
             #설명
-        self.v_text = text_set(gamefont,30,False,False,'음량설정',True,(255,255,255))
+        T_volume = ['volume','음량설정']
+        self.v_text = text_set(gamefont,30,False,False,T_volume[lg],True,(255,255,255))
         self.v_text_width,self.v_text_height = self.v_text.get_size()
             #설명과 이미지의 거리
         self.v_space = 30
@@ -1375,15 +1524,20 @@ class Main_Menu():
 
         #무기 변경 방식 설정 (c:change),(s:subject),(b:button),(n:change weapon as numberkey),(r:change weapon as mouse rightclick)
             #설정 설명 텍스트,크기
-        self.c_text_s = text_set(gamefont,30,False,False,'무기 변경 방식',True,(255,255,255))
+        T_change = ['How to change weapons','무기 변경 방식']
+        T_change_size = [20,30]
+
+        self.c_text_s = text_set(gamefont,T_change_size[lg],False,False,T_change[lg],True,(255,255,255))
         self.c_text_s_width,self.c_text_s_height = self.c_text_s.get_size()
             #박스 크기
         self.c_box_width,self.c_box_height = 200,50
             #설정 텍스트(숫자키로 변경),크기
-        self.c_text_n = text_set(gamefont,15,False,False,'숫자키로 변경',True,(255,255,255))
+        T_change_button = [('number key','mouse rightclick'),('숫자키로 변경','마우스 우클릭으로 변경')]
+
+        self.c_text_n = text_set(gamefont,15,False,False,T_change_button[lg][0],True,(255,255,255))
         self.c_text_n_width,self.c_text_n_height = self.c_text_n.get_size()
             #설정 텍스트(우클릭으로 변경),크기
-        self.c_text_r = text_set(gamefont,15,False,False,'마우스 우클릭으로 변경',True,(255,255,255))
+        self.c_text_r = text_set(gamefont,15,False,False,T_change_button[lg][1],True,(255,255,255))
         self.c_text_r_width,self.c_text_r_height = self.c_text_r.get_size()
             #개체 사이의 거리
         self.c_space = 30
@@ -1406,15 +1560,19 @@ class Main_Menu():
 
         #그래픽 설정 버튼 (g:graphic), (s:subject), (l:low detail), (h:high detail)
             #설정 설명 텍스트,크기
-        self.g_text_s = text_set(gamefont,30,False,False,'그래픽 품질',True,(255,255,255))
+        T_graphic = ['quality','그래픽 품질']
+
+        self.g_text_s = text_set(gamefont,30,False,False,T_graphic[lg],True,(255,255,255))
         self.g_text_s_width,self.g_text_s_height = self.g_text_s.get_size()
             #박스 크기
         self.g_box_width,self.g_box_height = 170,50
             #설정 텍스트(저품질),크기
-        self.g_text_l = text_set(gamefont,15,False,False,'저품질',True,(255,255,255))
+        T_graphic_button = [('low','high'),('저품질','고품질')]
+
+        self.g_text_l = text_set(gamefont,20,False,False,T_graphic_button[lg][0],True,(255,255,255))
         self.g_text_l_width,self.g_text_l_height = self.g_text_l.get_size()
             #설정 텍스트(고품질),크기
-        self.g_text_h = text_set(gamefont,15,False,False,'고품질',True,(255,255,255))
+        self.g_text_h = text_set(gamefont,20,False,False,T_graphic_button[lg][1],True,(255,255,255))
         self.g_text_h_width,self.g_text_h_height = self.g_text_h.get_size()
             #개체 사이의 거리
         self.g_space = 30
@@ -1437,7 +1595,9 @@ class Main_Menu():
 
         #시작 버튼  (s : start)
             #설명
-        self.s_text = text_set(gamefont,40,False,True,'시작!',True,(255,255,255))
+        T_start = ['start!','시작!']
+
+        self.s_text = text_set(gamefont,40,False,True,T_start[lg],True,(255,255,255))
         self.s_text_width,self.s_text_height = self.s_text.get_size()
             #설명 좌표
         self.s_text_x = (screen_width -self.s_text_width)/2
@@ -1503,7 +1663,7 @@ class Main_Menu():
         pg.draw.rect(screen,(230, 233, 6),(self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y),3)    
 
     def click(self):
-        global volume_modify,volume_modify_max,main_menu,change_weapon_type,Graphic
+        global volume_modify,volume_modify_max,main_menu_bool,change_weapon_type,Graphic
         mouse_x = pg.mouse.get_pos()[0]
         mouse_y = pg.mouse.get_pos()[1]
         #메인 메뉴
@@ -1541,7 +1701,7 @@ class Main_Menu():
             #시작 버튼
         if collide_with_mouse(mouse_x,mouse_y,self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y):
             Sound(assets,'game_start.wav',set_sound(0.5))
-            main_menu = False
+            main_menu_bool = False
 
     def update(self):
         #음량 값
@@ -1574,10 +1734,12 @@ zombie_blood = ZombieBlood()
 player_hurt = PlayerHurt()
 particle = Particle()
 blood_splash = BloodSplash()
+pause = Pause()
 
 if __name__ == '__main__':
     while not done:
         screen.fill(background_color)
+        fps_proportion = 60/FPS
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 done = True
@@ -1607,7 +1769,8 @@ if __name__ == '__main__':
                     special_weapon = True
 
                 if event.key == pg.K_ESCAPE:
-                    Pause = True if Pause==False else False
+                    if not main_menu_bool:
+                        pause.bool = True if pause.bool==False else False
                 
             if event.type == pg.KEYUP:
                 if event.key == pg.K_a:
@@ -1629,10 +1792,13 @@ if __name__ == '__main__':
                         
             if event.type == pg.MOUSEBUTTONUP:
                 if event.button == pg.BUTTON_LEFT:
-                    if main_menu:
+                    if main_menu_bool:
                         main_menu.click()
+                    if pause.bool == True:
+                        pause.click()
+
                 if event.button == pg.BUTTON_RIGHT:
-                    if not main_menu and Upgrading == False:
+                    if not main_menu_bool and Upgrading == False:
                         if change_weapon_type == 1:
                             if weapon == 0: 
                                 weapon = 1
@@ -1651,13 +1817,13 @@ if __name__ == '__main__':
 
         mouse_x, mouse_y = pg.mouse.get_pos()
 
-        if not main_menu: 
+        if not main_menu_bool: 
             if not player.health <= 0:
                 Game()
-                Crash_Zombie(zombie_melee,zombie_shoot) 
+                Crash_Zombie(zombie_melee,zombie_shoot)
             else:   
                 GameOver(set_sound(1.7))               
-            if not Pause:               
+            if not pause.bool:               
                 pg.mixer.unpause()
                 Wave(set_sound(0.7))  
                 upgrade.sound(set_sound(2)) 
@@ -1668,7 +1834,68 @@ if __name__ == '__main__':
         else: #메인 메뉴
             main_menu.draw()
             main_menu.update()
+
+        #fps 설정
+        if Upgrading or pause.bool == True:
+            FPS = 30
+        else: FPS = 60
+
+        print(FPS)
+
+        if ResetGame:
+            #점수
+            score = 0
+            #무기
+            weapon = 1
+            special_weapon = False
+            #총
+            firegun_time_startval = 60
+            firegun_time = firegun_time_startval
+            bullet.list.clear()
+            #칼
+            knife_atteck_term_startval = 120
+            knife_atteck_term = knife_atteck_term_startval
+            knife_atteck_timelong = 10
+            knife_cooltime = 0
+            knife_increase_size = 0
+            knife.atteck = 0
+            #좀비
+            zombie_melee_spawntime = 90
+            zombie_shoot_spawntime = 160
+            zombie_melee.list.clear()
+            zombie_shoot.list.clear()
+            #스폰 수
+            zm_spawn = 4
+            zs_spawn = 1
+            zm_spawn_startval = zm_spawn
+            zs_spawn_startval = zs_spawn
+            zm_spawncount = zm_spawn
+            zs_spawncount = zs_spawn
+            #남은 좀비 수
+            Z_left = 0
+            #웨이브
+            wave = 0
+            wave_time = 0
+            wave_killzombie = 0
+            wave_fontalpha = 255
+            between_wave = 60
+            wave_fontdraw = False
+            #수류탄
+            special_weapon_click = 1
+            special_weapon_availabletime = 0
+            special_weapon_have = 3
+            #최대체력
+            max_health = 5
+            #플레이어
+            player.health = 5
+            player.speed = player.speed_init
+            #피 효과
+            blood_splash.object.clear()
+            zombie_blood.list.clear()
+            player_hurt.ph_e_transparent = 0
+            
+            ResetGame = False
         
         pg.display.flip()
-        clock.tick(60)
+        clock.tick(FPS)
     pg.quit()
