@@ -49,14 +49,21 @@ for f in gamefont:
         
 #텍스트 함수
 def text_set(font,size,bold,italic,contents:str,antialias,color):
+    """
+    텍스트를 반환함
+    """
     font = pg.font.SysFont(font,size,bold,italic)
     text = font.render(contents,antialias,color)
     return text
 
-#마우스와 스프라이트 충돌 (if문 조건절에 사용해야됨)
-def collide_with_point(mouse_x,mouse_y,sprite_x,sprite_y,sprite_width,sprtie_height):
-    return sprite_x <= mouse_x <= sprite_x + sprite_width \
-            and sprite_y <= mouse_y <= sprite_y + sprtie_height
+#점과 스프라이트 충돌 (if문 조건절에 사용해야됨)
+def collide_with_point(point_x,point_y,sprite_x,sprite_y,sprite_width,sprtie_height):
+    """
+    점과 스프라이트 충돌할 때 처리하는 함수
+     (if문 조건절에 사용해야 함)
+    """
+    return sprite_x <= point_x <= sprite_x + sprite_width \
+            and sprite_y <= point_y <= sprite_y + sprtie_height
 
 #사운드
 def Sound(path,file,volume):
@@ -66,6 +73,7 @@ def Sound(path,file,volume):
 
 #투명도가 있는 사각형
 def rect_alpha(width,height,color,alpha):
+    '''투명도가 있는 사각형'''
     box = pg.Surface((width,height))  
     box.set_alpha(alpha)                
     box.fill(color)        
@@ -73,11 +81,33 @@ def rect_alpha(width,height,color,alpha):
 
 #가운데 배치
 def middle(standard_vector,standard_width,object_width):
+    """
+    오브젝트 가운데에 배치하는 오브젝트의 좌표값을 반환함
+    """
     return standard_vector+(standard_width-object_width)/2
 
 #사운드 함수
 def set_sound(proportion_sound):  
+    """
+    ``proportion_sound`` : 상대적인 사운드 크기
+    """
     return proportion_sound/volume_modify_max*volume_modify
+
+def distinguish_sign(value):
+    """
+    양수면
+        return : ``1``
+    음수면
+        return : ``-1``
+    0이면 
+        return : ``0``
+    """
+    result = 0
+    if value > 0:result = 1
+    elif value < 0:result = -1
+    elif value == 0:result = 0
+
+    return result
 
 #전역 변수
     #파일
@@ -178,50 +208,33 @@ class Player(pg.sprite.Sprite):
 
     def move(self):
         #좌우 방향키와 상하 방향키를 같이 누른다면 속도 감소
-        self.decrease_speed = self.normal_speed - 0.5
-        if len(press_x_list) != 0 and len(press_y_list) != 0:
+        self.decrease_speed = self.normal_speed - 0.5-0.1*upgrade.speed_level
+        if len(press_x_list) > 0 and len(press_y_list) > 0:
             self.speed = self.decrease_speed*fps_proportion
-            if press_x_list[-1] < 0:
-                press_x_list[-1] = self.speed*-1
-            else:
-                press_x_list[-1] = self.speed
-            if press_y_list[-1] < 0:
-                press_y_list[-1] = self.speed*-1
-            else:
-                press_y_list[-1] = self.speed
         else:
-            self.speed += self.normal_speed - self.speed
-            self.speed *= fps_proportion
-            try:
-                if len(press_x_list) != 0:
-                    if press_x_list[-1] < 0:
-                        press_x_list[-1] = self.speed*-1
-                    else:
-                        press_x_list[-1] = self.speed
-                if len(press_y_list) != 0:
-                    if press_y_list[-1] < 0:
-                        press_y_list[-1] = self.speed*-1
-                    else:
-                        press_y_list[-1] = self.speed
-            except:
-                pass
+            self.speed = self.normal_speed*fps_proportion
+
+        if len(press_x_list) > 0:
+                press_x_list[-1] = self.speed*distinguish_sign(press_x_list[-1])
+        if len(press_y_list) > 0:
+            press_y_list[-1] = self.speed*distinguish_sign(press_y_list[-1])  
+
         #메인
-        if press_left == False and press_right == False:
+            #좌우
+        if (press_left,press_right) == (False,False):
             press_x_list.clear()
         if len(press_x_list) > 2:
             del press_x_list[0]        
-        try:
+        if len(press_x_list) > 0:
             self.x += press_x_list[-1]
-        except Exception:
-            pass
-        if press_up == False and press_down == False:
+            #상하
+        if (press_up,press_down) == (False,False):
             press_y_list.clear()
         if len(press_y_list) > 2:
             del press_y_list[0]        
-        try:
+        if len(press_y_list) > 0:
             self.y += press_y_list[-1]
-        except Exception:
-            pass
+
         #벽에 닿았을 때
         if self.x < 0:self.x += self.speed
         if self.x > screen_width-self.width:self.x -= self.speed
@@ -499,7 +512,7 @@ class Bomb():
         #떨어지는 모션
         if special_weapon == True:
             if click_left == True and special_weapon_click == 1 and special_weapon_availabletime == 0\
-                and special_weapon_have > 0:
+                and special_weapon_have > 0 and mouse_y > UIbar_height:
                 special_weapon_click = 0    
                 special_weapon_availabletime = 30              
                 self.fallingpos.append([mouse_x,mouse_y])
@@ -517,6 +530,7 @@ class Bomb():
                 self.explode.append([f[0]-self.h_width//2,f[1]-self.h_height//2])
                 self.explode_draw.append([f[0]-self.h_width//2,f[1]-self.h_height//2,12,0,3,-1])
                                         #x[0], y[1], 폭발모션시간[2], 에니메이션 1장당 시간[3], [3]의 초기값[4], 애니메이션 사진[5]
+                bomb_splash.spawn(f[0],f[1],15,7,1.045)
                 self.fallingpos.remove(f)  
 
                 self.explode.clear()
@@ -576,7 +590,7 @@ class Bomb():
     def update(self):
         self.falling()
         self.damage(zombie_melee,zombie_shoot)
-
+    
 #좀비(근접)
 class Zombie_melee():
     def __init__(self):
@@ -647,6 +661,7 @@ class Zombie_melee():
             if Zmp_rect.colliderect(player.h_rect):
                 if Zmp[6] == 0:
                     player.health -= 1
+                    blood_splash.spawn(player.x,player.y,3,3,(255,0,0))
                     score -= 100
                     Zmp[6] = zombie_melee_crash_player_time    
                     self.ph_e_appear = True     
@@ -837,6 +852,7 @@ class Zombie_shoot():
             if self.b_rect.colliderect(player.h_rect):
                 self.bullet.remove(Zb)
                 player.health -= 1
+                blood_splash.spawn(player.x,player.y,3,3,(255,0,0))
                 score -= 100
                 self.ph_e_appear = True     
                 self.ph_sound = True    
@@ -962,11 +978,11 @@ class BloodSplash():
         self.SubtractionDegree = 0.1
         self.zombie_die = False
 
-    def spawn(self,zombie_x,zombie_y,amount,speed,color): #speed : 맞았을 때 1 죽었을 때 2
+    def spawn(self,object_x,object_y,amount,speed,color): #speed : 맞았을 때 1 죽었을 때 2
         self.object.append([])
         for i in range(0,amount):
-            self.object[-1].append([zombie_x+(30-self.SideLength)/2,zombie_y+(30-self.SideLength)/2,\
-                        random.randint(-100,100)/100,random.randint(-450,-200)/100,zombie_y+30,speed,color])
+            self.object[-1].append([object_x+(30-self.SideLength)/2,object_y+(30-self.SideLength)/2,\
+                        random.randint(-100,100)/100,random.randint(-450,-200)/100,object_y+30,speed,color])
                         #x:[0], y:[0], x범위:[2], y범위:[3], 파티클 끝나는 지점:[4], speed[5], color:[6]
     def draw(self):
         for I in self.object:
@@ -992,9 +1008,70 @@ class BloodSplash():
         self.move()
         self.delete()
 
+#수류탄 효과
+class BombSplash():
+    def __init__(self):
+        self.color = [
+            (255, 81, 163),
+            (255, 102, 174),
+            (255, 114, 181),
+            (251, 128, 186),
+            (254, 118, 182)
+        ]
+        self.object = []
+
+    def spawn(self,StartPoint_x,StartPoint_y,count,speed,DecreaseSpeed):
+        degree = 0
+        for i in range(count):
+            R = 255
+            G = random.randint(80,130)
+            B = random.randint(150,180)
+            RandomColor = (R,G,B)
+
+            RandomSize = random.randint(30,50)
+            x = middle(StartPoint_x,0,RandomSize)
+            y = middle(StartPoint_y,0,RandomSize)
+
+            degree += 360/count
+            angle = math.radians(degree)
+            dx = math.cos(angle)*speed
+            dy = math.sin(angle)*speed
+
+            self.object.append([])
+            self.object[-1].append([x,y,dx,dy,DecreaseSpeed,RandomColor,RandomSize,256,0])
+                                    #x:[0] y:[1] dx:[2] dy:[3] decrease speed:[4] random color:[5] random size:[6]
+                                        #alpha:[7] time:[8]
+
+    def move(self,i,j):
+        j[0] += j[2] #x += dx
+        j[1] += j[3] #y += dy
+        j[2] /= j[4] #dx -= decrease speed
+        j[3] /= j[4] #dy -= decrease speed
+        
+    def alpha(self,i,j):
+        if j[8] > 20:
+            j[7] -= 20
+        j[8] += 1
+
+    def delete(self,i,j):
+        if j[7] <= 0:
+            self.object.remove(i)
+
+    def draw(self):
+        for i in self.object:
+            for j in i:
+                screen.blit(rect_alpha(j[6],j[6],j[5],j[7]),(j[0],j[1]))
+
+    def update(self):
+        for i in self.object:
+            for j in i:
+                self.move(i,j)
+                self.alpha(i,j)
+                self.delete(i,j)
+        print(self.object)
+
 #좀비 충돌
 def Crash_Zombie(zm,zs):
-
         a_index, b_index = 0,0
         for Zm1 in zm.list:
             for Zm2 in zm.list:
@@ -1056,51 +1133,8 @@ def Click(u):
         if u.pressing_mouse > 0:
             u.pressing_mouse -= 1
 
-#게임
-def Game():
-    global wave_time,Upgrading
-    if main_menu_bool == False:
-        if Upgrading == False and pause.bool == False:
-            #시간
-            #Timegoing()
-            #업데이트
-            player.update()
-            atteck_dir.update()
-            bullet.update() 
-            knife.update()
-            zombie_melee.update()
-            zombie_shoot.update()
-            bomb.update()
-            zombie_blood.update()
-            particle.update()
-            blood_splash.update()
-            
-            #사운드 (wave사운드는 맨 Wave함수와 묶음)
-            bullet.sound(set_sound(0.1))
-            bomb.sound(set_sound(0.5))
-            knife.sound(set_sound(0.3))
-            zombie_shoot.sound(set_sound(0.5),set_sound(0.5),set_sound(0.3))
-            zombie_melee.sound(set_sound(0.5), set_sound(0.3))
-            player.sound(set_sound(0.4))
-        
-        #그리기
-        zombie_blood.draw()
-        bullet.draw()
-        atteck_dir.draw()
-        zombie_shoot.draw()
-        player.draw()
-        zombie_melee.player_hurt_effect()
-        zombie_shoot.player_hurt_effect()
-        zombie_melee.draw()
-        knife.draw()
-        blood_splash.draw()
-        bomb.draw()
-        particle.draw()
-        target_mouse.draw()
-        
-        #클릭
-        Click(upgrade)
-
+class UI:
+    def draw(self):
         #화면 테두리
         pg.draw.rect(screen,(140,140,140),[0,0,screen_width,screen_height+UIbar_height],3)
         #UI바
@@ -1127,6 +1161,54 @@ def Game():
         #남은 좀비 수
         text_zombie_left = text_set(gamefont, 18, False, False, f"남은 좀비 수 {int(Z_left)}", True, (71,200,62))
         screen.blit(text_zombie_left, (screen_width/2-(text_zombie_left.get_rect())[2]/2,110))
+
+#게임
+def Game():
+    global wave_time,Upgrading
+    if main_menu_bool == False:
+        if Upgrading == False and pause.bool == False:
+            #시간
+            #Timegoing()
+            #업데이트
+            player.update()
+            atteck_dir.update()
+            bullet.update() 
+            knife.update()
+            zombie_melee.update()
+            zombie_shoot.update()
+            bomb.update()
+            zombie_blood.update()
+            particle.update()
+            blood_splash.update()
+            bomb_splash.update()
+            
+            #사운드 (wave사운드는 맨 Wave함수와 묶음)
+            bullet.sound(set_sound(0.1))
+            bomb.sound(set_sound(0.5))
+            knife.sound(set_sound(0.3))
+            zombie_shoot.sound(set_sound(0.5),set_sound(0.5),set_sound(0.3))
+            zombie_melee.sound(set_sound(0.5), set_sound(0.3))
+            player.sound(set_sound(0.4))
+        
+        #그리기
+        zombie_blood.draw()
+        bullet.draw()
+        atteck_dir.draw()
+        zombie_shoot.draw()
+        player.draw()
+        zombie_melee.player_hurt_effect()
+        zombie_shoot.player_hurt_effect()
+        zombie_melee.draw()
+        knife.draw()
+        blood_splash.draw()
+        bomb_splash.draw()
+        bomb.draw()
+        particle.draw()
+        ui.draw()
+        target_mouse.draw()
+        
+        #클릭
+        Click(upgrade)
 
         #체력이 적을 때 효과
         #Almostdie()
@@ -1724,6 +1806,8 @@ zombie_blood = ZombieBlood()
 player_hurt = PlayerHurt()
 particle = Particle()
 blood_splash = BloodSplash()
+bomb_splash = BombSplash()
+ui = UI()
 pause = Pause()
 
 if __name__ == '__main__':
@@ -1763,6 +1847,7 @@ if __name__ == '__main__':
                         pause.bool = True if pause.bool==False else False
                 
             if event.type == pg.KEYUP:
+                #움직임
                 if event.key == pg.K_a:
                     press_left = False
                     if press_right == True:
