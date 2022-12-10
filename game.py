@@ -1,13 +1,8 @@
 #-*- coding:utf-8 -*-
 import pygame as pg, os, time, random, math, sys
-from tkinter import *
+from 함수 import *
 
 pg.init()
-
-root = Tk()
-
-monitor_height = root.winfo_screenheight()
-monitor_width = root.winfo_screenwidth()
 
 #기본 세팅
 screen_width = 1200
@@ -24,90 +19,16 @@ set_color = (255, 59, 152)
 clock = pg.time.Clock() 
 done = False
 
-def change_dir(path): #경로 설정
-    os.chdir(path)
-change_dir('.')
-
-def resource_path(relative_path):  #파일경로
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-def load_img(path,img):  #이미지 함수
-    return pg.image.load(os.path.join(path,img))
-
 #폰트
 gamefont = ['한컴산뜻돋움','nanumgothic','hy견고딕','gulim']
-for f in gamefont:
-    for i in pg.font.get_fonts():
-        if f == i:
-            try:gamefont = gamefont[gamefont.index(f)]
-            except:pass
-            break
-        
-#텍스트 함수
-def text_set(font,size,bold,italic,contents:str,antialias,color):
-    """
-    텍스트를 반환함
-    """
-    font = pg.font.SysFont(font,size,bold,italic)
-    text = font.render(contents,antialias,color)
-    return text
 
-#점과 스프라이트 충돌 (if문 조건절에 사용해야됨)
-def collide_with_point(point_x,point_y,sprite_x,sprite_y,sprite_width,sprtie_height):
-    """
-    점과 스프라이트 충돌할 때 처리하는 함수
-     (if문 조건절에 사용해야 함)
-    """
-    return sprite_x <= point_x <= sprite_x + sprite_width \
-            and sprite_y <= point_y <= sprite_y + sprtie_height
+AvailableGameFont_Set(gamefont)
 
-#사운드
-def Sound(path,file,volume):
-    sound = pg.mixer.Sound(os.path.join(path,file))
-    pg.mixer.Sound.set_volume(sound, volume)
-    sound.play()
-
-#투명도가 있는 사각형
-def rect_alpha(width,height,color,alpha):
-    '''투명도가 있는 사각형'''
-    box = pg.Surface((width,height))  
-    box.set_alpha(alpha)                
-    box.fill(color)        
-    return box
-
-#가운데 배치
-def middle(standard_vector,standard_width,object_width):
+def ValueSetting() -> None: #차트 정리용
     """
-    오브젝트 가운데에 배치하는 오브젝트의 좌표값을 반환함
+    전역 변수 선언하는 곳
+                    V V V
     """
-    return standard_vector+(standard_width-object_width)/2
-
-#사운드 함수
-def set_sound(proportion_sound):  
-    """
-    ``proportion_sound`` : 상대적인 사운드 크기
-    """
-    return proportion_sound/volume_modify_max*volume_modify
-
-def distinguish_sign(value):
-    """
-    양수면
-        return : ``1``
-    음수면
-        return : ``-1``
-    0이면 
-        return : ``0``
-    """
-    result = 0
-    if value > 0:result = 1
-    elif value < 0:result = -1
-    elif value == 0:result = 0
-
-    return result
 
 #전역 변수
     #파일
@@ -168,8 +89,8 @@ max_health = 5
 card_num = random.randint(2,3)
 Upgrading = False
     #사운드
-volume_modify_max = 10
-volume_modify = 5
+volume_max = 10
+volume = 5
 gameover_sound_play = 0
     #메뉴
 main_menu_bool = True
@@ -181,9 +102,8 @@ fps_proportion = 60/FPS
 lg = 0 #language 0:eng 1:kr
 
 #플레이어
-class Player(pg.sprite.Sprite):
+class Player:
     def __init__(self):
-        super(Player,self).__init__()
         global max_health
         self.img = load_img(assets,'player.png').convert()
         self.rect = self.img.get_rect()
@@ -282,7 +202,7 @@ def Almostdie():
         screen.blit(rect_alpha(screen_width,screen_height+UIbar_height,(0,0,0),100),[0,0])
 
 #맞았을 때 화면 전체적으로 효과
-class PlayerHurt():
+class PlayerHurt:
     def __init__(self):
         self.EffectThick = 100
         self.ph_e_transparent_initval = 150
@@ -300,7 +220,7 @@ class PlayerHurt():
             self.ph_e_transparent -= 3
             
 #공격 방향 표시
-class Atteck_dir():
+class Atteck_dir:
     def __init__(self):
         self.img = []
         self.img.append([load_img(assets,'atteck_dir_gun.png').convert_alpha(),0,0,(34,177,76)])
@@ -324,7 +244,7 @@ class Atteck_dir():
         self.result.set_colorkey(current_img[3])
         
 #무기가 수류탄일 때 마우스에 타겟 이미지
-class Target_mouse():
+class Target_mouse:
     def __init__(self):
         self.img = load_img(assets,'target.png').convert_alpha()
         self.width, self.height = self.img.get_size()
@@ -338,7 +258,7 @@ class Target_mouse():
                 pg.mouse.set_visible(True)
 
 #총알
-class Bullet():
+class Bullet:
     def __init__(self):
         self.img = load_img(assets,'bullet.png').convert_alpha()
         self.width,self.height = self.img.get_size()
@@ -407,7 +327,7 @@ class Bullet():
             self.fire_term = firegun_time
     
 #칼
-class Knife():
+class Knife:
     def __init__(self):
         global knife_atteck_term, knife_atteck_timelong
         self.img = load_img(assets,'knife_hitbox.png').convert_alpha()
@@ -478,7 +398,7 @@ class Knife():
         self.Atteck()   
 
 #특수무기(수류탄)
-class Bomb():
+class Bomb:
     def __init__(self):
         self.img = load_img(assets,'bomb.png')
         self.img.set_colorkey((255,255,255))     
@@ -568,23 +488,16 @@ class Bomb():
             for m in zm.list:
                 zm.rect.topleft = m[0],m[1]
                 if zm.rect.colliderect(self.rect):
-                    zombie_blood.list.append([m[0]-(zombie_blood.width-self.width)/2,m[1],zombie_blood.ShowingTime])
-                    zm.list.remove(m)
-                    Z_left -= 1   
-                    score += 100
+                    m[5] -= 2
+                    
             for s in zs.list:
                 zs.rect.topleft = s[0],s[1]
                 if zs.rect.colliderect(self.rect):
-                    zombie_blood.list.append([s[0]-(zombie_blood.width-self.width)/2,s[1],zombie_blood.ShowingTime])
-                    zs.list.remove(s)
-                    Z_left -= 1 
-                    score += 100 
+                    s[5] -= 2
 
     def sound(self,volume):
         if self.bomb_arrive:
-            bomb_sound = pg.mixer.Sound(os.path.join(assets,'bomb_sound.wav'))
-            pg.mixer.Sound.set_volume(bomb_sound, volume)
-            bomb_sound.play()
+            Sound(assets,'bomb_sound.wav',volume)
             self.bomb_arrive = False
         
     def update(self):
@@ -592,7 +505,7 @@ class Bomb():
         self.damage(zombie_melee,zombie_shoot)
     
 #좀비(근접)
-class Zombie_melee():
+class Zombie_melee:
     def __init__(self):
         self.img = load_img(assets,'zombie_1.jpg').convert()
         self.img_Lflip = pg.transform.flip(self.img,True,False)
@@ -672,13 +585,14 @@ class Zombie_melee():
                 Zmp[6] -= 1
             #die
             if Zmp[5] <= 0:
-                self.die = True
-                self.list.remove(Zmp)
-                zombie_blood.list.append([Zmp[0]-(zombie_blood.width-self.width)/2,Zmp[1]+25,zombie_blood.ShowingTime])
-                blood_splash.spawn(Zmp[0],Zmp[1],7,1.7,(255,0,0))
                 score += 100
                 wave_killzombie += 1
                 Z_left -= 1
+                zombie_blood.list.append([Zmp[0]-(zombie_blood.width-self.width)/2,Zmp[1]+25,zombie_blood.ShowingTime])
+                blood_splash.spawn(Zmp[0],Zmp[1],7,1.7,(255,0,0))
+                lastzombie_effect.spawn(middle(Zmp[0],self.width,0),middle(Zmp[1],self.height,0),10,0.35,lastzombie_effect.color)
+                self.die = True
+                self.list.remove(Zmp)
 
     def move(self):   
         for Zm in self.list:
@@ -713,17 +627,15 @@ class Zombie_melee():
     
             screen.blit(Zm[8],(Zm[9],Zm[10]))
 
-    def sound(self,volume_die,volume_ph):
+    def sound(self,volume_die,volume_ph,volume_LastZombie):
         if self.die:
-            zombie_die_sound = pg.mixer.Sound(os.path.join(assets,'zombie_die_sound.wav'))
-            pg.mixer.Sound.set_volume(zombie_die_sound, volume_die)
-            zombie_die_sound.play()
+            Sound(assets,'zombie_die_sound.wav',volume_die)
+            if Z_left == 0:
+                lastzombie_effect.sound(volume_LastZombie)
             self.die = False
-
+            
         if self.ph_sound:
-            ph_sound = pg.mixer.Sound(os.path.join(assets,'player_hurt_sound.wav'))
-            pg.mixer.Sound.set_volume(ph_sound, volume_ph)
-            ph_sound.play()
+            Sound(assets,'player_hurt_sound.wav',volume_ph)
             self.ph_sound = False
 
     def player_hurt_effect(self):
@@ -748,7 +660,7 @@ class Zombie_melee():
         self.c_rect.topleft = (self.c_x,self.c_y)
         
 #좀비(원거리)
-class Zombie_shoot():
+class Zombie_shoot:
     def __init__(self):
         #zombie
         self.img = load_img(assets,'zombie_2.jpg').convert()
@@ -828,13 +740,14 @@ class Zombie_shoot():
             Zs[7] -= 1
             #die
             if Zs[5] <= 0:
-                self.die = True
-                self.list.remove(Zs)
-                zombie_blood.list.append([Zs[0]-(zombie_blood.width-self.width)/2,Zs[1]+25,zombie_blood.ShowingTime])
-                blood_splash.spawn(Zs[0],Zs[1],7,1.7,(255,0,0))
                 score += 100
                 wave_killzombie += 1
                 Z_left -= 1
+                zombie_blood.list.append([Zs[0]-(zombie_blood.width-self.width)/2,Zs[1]+25,zombie_blood.ShowingTime])
+                blood_splash.spawn(Zs[0],Zs[1],7,1.7,(255,0,0))
+                lastzombie_effect.spawn(middle(Zs[0],self.width,0),middle(Zs[1],self.height,0),10,0.35,lastzombie_effect.color)
+                self.die = True
+                self.list.remove(Zs)
     
     def Bullet(self):
         global score
@@ -873,21 +786,17 @@ class Zombie_shoot():
             else:
                 screen.blit(self.b_img,(Zb[0],Zb[1]))
 
-    def sound(self,volume_bullet,volume_die,volume_ph):
+    def sound(self,volume_bullet,volume_die,volume_ph,volume_LastZombie):
         for Zs in self.list:
             if Zs[7] == 0:
-                zombie_bullet_sound = pg.mixer.Sound(os.path.join(assets,'zombie_bullet_sound.wav'))
-                pg.mixer.Sound.set_volume(zombie_bullet_sound, volume_bullet)
-                zombie_bullet_sound.play()
+                Sound(assets,'zombie_bullet_sound.wav',volume_bullet)
         if self.die:
-            zombie_die_sound = pg.mixer.Sound(os.path.join(assets,'zombie_die_sound.wav'))
-            pg.mixer.Sound.set_volume(zombie_die_sound, volume_die)
-            zombie_die_sound.play()
+            Sound(assets,'zombie_die_sound.wav',volume_die)
+            if Z_left == 0:
+                lastzombie_effect.sound(volume_LastZombie)
             self.die = False
         if self.ph_sound:
-            ph_sound = pg.mixer.Sound(os.path.join(assets,'player_hurt_sound.wav'))
-            pg.mixer.Sound.set_volume(ph_sound, volume_ph)
-            ph_sound.play()
+            Sound(assets,'player_hurt_sound.wav',volume_ph)
             self.ph_sound = False
     
     def player_hurt_effect(self):
@@ -906,8 +815,32 @@ class Zombie_shoot():
         self.Basic()
         self.Bullet()
 
+class PlayerHealth_UI:
+    def __init__(self):
+        self.img = load_img(assets,'PlayerHealth_UI.png').convert_alpha()
+        self.board_width,self.board_height = 350,50
+        self.board_x = middle(0,screen_width,self.board_width)
+        self.board_y = 50
+        self.HealthColor = (238, 61, 61)
+        self.LineColor = (104, 36, 36)
+        self.DecimalPoint_discrimination = int(player.health)+1 if round(player.health,1) != 0 else int(player.health)
+
+    def draw(self):
+        #체력 표시
+        pg.draw.rect(screen,self.HealthColor,[self.board_x,self.board_y,\
+                        self.board_width*(player.health/max_health),self.board_height])
+        #부가 이미지
+        #screen.blit(self.img,[self.board_x,self.board_y])
+        #보드
+        pg.draw.rect(screen,self.LineColor,[self.board_x,self.board_y,self.board_width,self.board_height],3)
+        #세로선
+        line_x = self.board_x
+        for i in range(int(max_health)-1 if player.health-int(max_health) == 0 else int(max_health)):
+            line_x += self.board_width/int(max_health) if max_health-int(max_health) == 0 else int(max_health)+1
+            pg.draw.line(screen,self.LineColor,(line_x,self.board_y),(line_x,self.board_y+self.board_height-3),2)
+
 #좀비 죽었을 때 핏자국
-class ZombieBlood():
+class ZombieBlood:
     def __init__(self):
         self.list = []
         self.width,self.height = 20,10
@@ -970,8 +903,44 @@ class Particle():
             self.move(i)
             self.visibletime(i)
 
+#웨이브에서 마지막 좀비를 죽였을 때 효과
+class LastZombie_Effect:
+    def __init__(self):
+        self.color = (255,255,255)
+        self.object = []
+
+    def spawn(self,x:float,y:float,speed:float,increase_speed:float,color:tuple):
+        """
+        웨이브에서 마지막 좀비일 때 스폰
+            (``if문 내장``)
+        """
+        if Z_left == 0:
+            size = 0
+            self.object.append([x,y,size,speed,increase_speed,color])
+                            #x:[0], y:[1], size[2], speed[3], increase_speed[4], color[5]
+
+    def delete(self,i):
+        if i[2] > screen_width:
+            self.object.remove(i)
+
+    def size_update(self,i):
+        i[2] += i[3]
+        i[3] += i[4]
+
+    def sound(self,volume):
+        Sound(assets,'LastZombie_sound.wav',volume)
+
+    def draw(self):
+        for i in self.object:
+            pg.draw.circle(screen,i[5],(i[0],i[1]),i[2],3)
+
+    def update(self):
+        for i in self.object:
+            self.size_update(i)
+            self.delete(i)
+    
 #피튀기는 효과
-class BloodSplash():
+class BloodSplash:
     def __init__(self):
         self.object = []
         self.SideLength = 5
@@ -1009,7 +978,7 @@ class BloodSplash():
         self.delete()
 
 #수류탄 효과
-class BombSplash():
+class BombSplash:
     def __init__(self):
         self.color = [
             (255, 81, 163),
@@ -1068,7 +1037,6 @@ class BombSplash():
                 self.move(i,j)
                 self.alpha(i,j)
                 self.delete(i,j)
-        print(self.object)
 
 #좀비 충돌
 def Crash_Zombie(zm,zs):
@@ -1134,6 +1102,15 @@ def Click(u):
             u.pressing_mouse -= 1
 
 class UI:
+    def __init__(self):
+        self.T_health = ["health","체력"]
+        self.T_knife = [["knife cooltime",25],["칼 쿨타임",30]]
+        self.T_grenade = ["grenade","수류탄 개수"]
+        self.T_wave = ["wave","웨이브"]
+        self.T_score = ["score","점수"]
+        self.T_WaveTime = ['wave time remaining','웨이브 남은 시간']
+        self.T_ZombieLeft = ['zombies left','남은 좀비']
+
     def draw(self):
         #화면 테두리
         pg.draw.rect(screen,(140,140,140),[0,0,screen_width,screen_height+UIbar_height],3)
@@ -1141,25 +1118,25 @@ class UI:
         pg.draw.rect(screen,(0,0,0),[0,0,screen_width,UIbar_height],0)
         pg.draw.rect(screen,set_color,[0,0,screen_width,UIbar_height],3)
         #체력
-        text_health = text_set(gamefont, 50, False, False,f"체력 : {player.health:0.1f}/{max_health}", True, (254, 46, 66))
-        screen.blit(text_health, (screen_width/2-(text_health.get_rect())[2]/2,50))
+        '''text_health = text_set(gamefont, 50, False, False,f"{self.T_health[lg]} : {player.health:0.1f}/{max_health}", True, (254, 46, 66))
+        screen.blit(text_health, (screen_width/2-(text_health.get_rect())[2]/2,50))'''
         #칼 쿨타임
-        text_k_cooltime = text_set(gamefont, 30, False, True,f"칼 쿨타임 : {knife.atteck_term/60:0.2f}", True, (126, 222, 226))
+        text_k_cooltime = text_set(gamefont, self.T_knife[lg][1], False, True,f"{self.T_knife[lg][0]} : {knife.atteck_term/60:0.2f}", True, (126, 222, 226))
         screen.blit(text_k_cooltime, (800,30))
         #수류탄 개수
-        text_bomb = text_set(gamefont, 30, False, True,f"수류탄 개수 : {special_weapon_have}", True, (10, 138, 124))
+        text_bomb = text_set(gamefont, 30, False, True,f"{self.T_grenade[lg]} : {special_weapon_have}", True, (10, 138, 124))
         screen.blit(text_bomb, (800,75))
         #웨이브
-        text_wave = text_set(gamefont, 30, False, True,f"wave : {wave}", True, set_color)
-        screen.blit(text_wave, (220,30))
+        text_wave = text_set(gamefont, 30, False, True,f"{self.T_wave[lg]} : {wave}", True, set_color)
+        screen.blit(text_wave, (180,30))
         #점수
-        text_score = text_set(gamefont, 30, False, True,f"점수 : {score}", True, (243, 240, 108))
-        screen.blit(text_score, (220,80))
+        text_score = text_set(gamefont, 30, False, True,f"{self.T_score[lg]} : {score}", True, (243, 240, 108))
+        screen.blit(text_score, (180,80))
         #웨이브 시간
-        text_wavetime = text_set(gamefont, 20, False, False,f"웨이브 시간 {wave_time//60}", True, (255,255,255))
+        text_wavetime = text_set(gamefont, 20, False, False,f"{self.T_WaveTime[lg]} {wave_time//60}", True, (255,255,255))
         screen.blit(text_wavetime, (screen_width/2-(text_wavetime.get_rect())[2]/2,20))
         #남은 좀비 수
-        text_zombie_left = text_set(gamefont, 18, False, False, f"남은 좀비 수 {int(Z_left)}", True, (71,200,62))
+        text_zombie_left = text_set(gamefont, 18, False, False, f"{int(Z_left)} {self.T_ZombieLeft[lg]}", True, (71,200,62))
         screen.blit(text_zombie_left, (screen_width/2-(text_zombie_left.get_rect())[2]/2,110))
 
 #게임
@@ -1181,16 +1158,18 @@ def Game():
             particle.update()
             blood_splash.update()
             bomb_splash.update()
+            lastzombie_effect.update()
             
             #사운드 (wave사운드는 맨 Wave함수와 묶음)
-            bullet.sound(set_sound(0.1))
-            bomb.sound(set_sound(0.5))
-            knife.sound(set_sound(0.3))
-            zombie_shoot.sound(set_sound(0.5),set_sound(0.5),set_sound(0.3))
-            zombie_melee.sound(set_sound(0.5), set_sound(0.3))
-            player.sound(set_sound(0.4))
+            bullet.sound(set_sound(0.1,volume,volume_max))
+            bomb.sound(set_sound(0.5,volume,volume_max))
+            knife.sound(set_sound(0.3,volume,volume_max))
+            zombie_shoot.sound(set_sound(0.5,volume,volume_max),set_sound(0.5,volume,volume_max),set_sound(0.3,volume,volume_max),set_sound(0.5,volume,volume_max))
+            zombie_melee.sound(set_sound(0.5,volume,volume_max), set_sound(0.3,volume,volume_max),set_sound(0.5,volume,volume_max))
+            player.sound(set_sound(0.4,volume,volume_max))
         
         #그리기
+        lastzombie_effect.draw()
         zombie_blood.draw()
         bullet.draw()
         atteck_dir.draw()
@@ -1205,6 +1184,7 @@ def Game():
         bomb.draw()
         particle.draw()
         ui.draw()
+        playerhealth_ui.draw()
         target_mouse.draw()
         
         #클릭
@@ -1255,17 +1235,22 @@ def Wave(volume):
                 upgrade.card_appear = True
 
                 #사운드
-                wave_change_sound = pg.mixer.Sound(os.path.join(assets,'wave change.wav'))
-                pg.mixer.Sound.set_volume(wave_change_sound, volume)
-                wave_change_sound.play()
+                Sound(assets,'wave change.wav',volume)
 
     if wave_fontalpha > 0 and wave_fontdraw:
         wave_fontalpha -= 2.3
 
+        T_ZombieLeft = ["zombies left","좀비 남음"]
+
         #웨이브 알림
         text_wave = text_set('Times new Roman',150, True, False,f"WAVE {wave}", True, set_color)
+        text_ZombieLeft = text_set(gamefont,30, False, True,f"{int(Z_left)} {T_ZombieLeft[lg]}", True, (71,200,62))
         text_wave.set_alpha(wave_fontalpha)
-        screen.blit(text_wave,(screen_width/2-(text_wave.get_rect())[2]/2,screen_height/2-(text_wave.get_rect())[1]/2))
+        text_ZombieLeft.set_alpha(wave_fontalpha)
+        screen.blit(text_wave,(middle(0,screen_width,text_wave.get_size()[0]),\
+                    middle(0,screen_height+UIbar_height,text_wave.get_size()[1])))
+        screen.blit(text_ZombieLeft,(middle(0,screen_width,text_ZombieLeft.get_size()[0]),\
+                    middle(0,screen_height+UIbar_height,text_ZombieLeft.get_size()[1]-200)))
     else:
         wave_fontdraw = False
 
@@ -1273,7 +1258,7 @@ def Wave(volume):
         wave_time -= 1
 
 #업그레이드
-class Upgrade():
+class Upgrade:
     def __init__(self):
         self.width,self.height = 150,300
         self.middlecard_x = screen_width/2-self.width/2
@@ -1293,6 +1278,9 @@ class Upgrade():
         self.knife_cooltime_level = 0
         self.health_level = 0
         self.speed_level = 0
+        #업그레이드 후 업그레이드 항목 표시
+        self.UpgradeItem_text_VisibleTime = 0
+        self.UpgradeItem_text_alpha = 255
 
     def random(self,card_num):
         while not len(self.card) == card_num:
@@ -1320,7 +1308,9 @@ class Upgrade():
                 self.select_card = self.card[self.pos.index(c)]
                 knife.cooltime = 0
                 self.pos.clear()    
-                self.card.clear()   
+                self.card.clear() 
+                self.UpgradeItem_text_VisibleTime = 120
+                self.UpgradeItem_text_alpha = 255  
 
         self.select()
 
@@ -1384,11 +1374,29 @@ class Upgrade():
         self.upgrade_list.append(["최대 체력 증가",f"{self.health_level}/{self.maxlevel} level"]) #6
         self.upgrade_list.append(["이동속도 증가",f"{self.speed_level}/{self.maxlevel} level"]) #7
 
+    def UpgradeItem_Text(self):
+        if self.UpgradeItem_text_VisibleTime > 0:
+            text = text_set(gamefont,20,False,True,str(self.upgrade_list[self.select_card][0]),True,(50,216,255))
+            text_width,text_height = text.get_size()
+
+            if self.UpgradeItem_text_VisibleTime <= 30:
+                text.set_alpha(self.UpgradeItem_text_alpha)
+                self.UpgradeItem_text_alpha -= 10
+                
+            screen.blit(text,(middle(0,screen_width,text_width),600))
+
+            self.UpgradeItem_text_VisibleTime -= 1
+        
     def draw(self):   
+        effect_SpaceWithBox = 20
         for c in self.pos: 
             pg.draw.rect(screen,(0,0,0),[c[0],c[1],self.width,self.height],0)
             pg.draw.rect(screen,set_color,[c[0],c[1],self.width,self.height],3)
-           
+            #효과
+            if collide_with_point(mouse_x,mouse_y,c[0],c[1],self.width,self.height):
+                pg.draw.rect(screen,(192,192,192),[c[0]-effect_SpaceWithBox,c[1]-effect_SpaceWithBox,\
+                                self.width+effect_SpaceWithBox*2,self.height+effect_SpaceWithBox*2],3)
+
         for cd in self.card:
             cd_index = self.card.index(cd)
             text_ug_des = text_set(gamefont, 15, False, False,f"{self.upgrade_list[self.card[cd_index]][0]}",True,(255,255,255))
@@ -1413,6 +1421,7 @@ class Upgrade():
 
     def update(self,card_num):
         global Upgrading
+        #self.UpgradeItem_Text()
         if between_wave <= 0:
             Upgrading = True
 
@@ -1439,7 +1448,7 @@ def GameOver(volume):
     if player.health <= 0:
         screen.fill((background_color))
         #line
-        pg.draw.rect(screen,(204,61,61),(0,0,screen_width,screen_height+UIbar_height),7)
+        pg.draw.rect(screen,(91,91,91),(0,0,screen_width,screen_height+UIbar_height),7)
         #text
         text_die_message = text_set(gamefont,30,False,True,"더 이상 버티지 못하였습니다...",True,(180,180,180))
         screen.blit(text_die_message,(screen_width/2-(text_die_message.get_rect())[2]/2,UIbar_height+30))
@@ -1463,7 +1472,7 @@ def GameOver(volume):
         pg.mouse.set_visible(True)
 
 #일시정지 메뉴
-class Pause():
+class Pause:
     def __init__(self):
         self.bool = False
         self.restart = False
@@ -1517,6 +1526,8 @@ class Pause():
         self.T_description_y = self.board_y+self.board_height-self.T_description_height-30
 
     def draw(self):
+        #배경
+        screen.blit(rect_alpha(screen_width,screen_height+UIbar_height,black,100),(0,0))
         #판
         pg.draw.rect(screen,self.board_color,(self.board_x,self.board_y,self.board_width,self.board_height))
         pg.draw.rect(screen,self.boardLine_color,(self.board_x,self.board_y,self.board_width,self.board_height),3)
@@ -1543,7 +1554,7 @@ class Pause():
             ResetGame = True
             self.bool = False
             pg.mixer.stop()
-            Wave(set_sound(0.7))
+            Wave(set_sound(0.7,volume,volume_max))
 
         if collide_with_point(mouse_x,mouse_y,self.MainmenuBox_x,self.MainmenuBox_y,self.MainmenuBox_width,self.MainmenuBox_height):
             ResetGame = True
@@ -1552,7 +1563,7 @@ class Pause():
             main_menu_bool = True
 
 #메뉴       
-class Main_Menu():
+class Main_Menu:
     def __init__(self):
         #타이틀
             #이미지
@@ -1587,7 +1598,7 @@ class Main_Menu():
         self.v_img_up_y = middle(self.v_text_y,self.v_text_height,self.modify_img_height) - self.v_img_space/2
         self.v_img_down_y = middle(self.v_text_y,self.v_text_height,self.modify_img_height) + self.v_img_space/2
             #음량 값 텍스트
-        self.v_text_num = text_set(gamefont,25,False,False,f"{volume_modify}",True,(255,255,255))
+        self.v_text_num = text_set(gamefont,25,False,False,f"{volume}",True,(255,255,255))
         self.v_text_num_width,self.v_text_num_height = self.v_text_num.get_size()
             #음량 값 좌표
         self.v_text_num_x = middle(self.v_img_x,self.modify_img_width,self.v_text_num_width)
@@ -1735,49 +1746,49 @@ class Main_Menu():
         pg.draw.rect(screen,(230, 233, 6),(self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y),3)    
 
     def click(self):
-        global volume_modify,volume_modify_max,main_menu_bool,change_weapon_type,Graphic
+        global volume,volume_max,main_menu_bool,change_weapon_type,Graphic
         mouse_x = pg.mouse.get_pos()[0]
         mouse_y = pg.mouse.get_pos()[1]
         #메인 메뉴
             #음량 설정
         if collide_with_point(mouse_x,mouse_y,self.v_img_x,self.v_img_up_y,self.modify_img_width,self.modify_img_height):
-            if volume_modify < volume_modify_max:
-                volume_modify += 1
-                Sound(assets,'volume_setting.wav',set_sound(0.7))
+            if volume < volume_max:
+                volume += 1
+                Sound(assets,'volume_setting.wav',set_sound(0.7,volume,volume_max))
 
         elif collide_with_point(mouse_x,mouse_y,self.v_img_x,self.v_img_down_y,self.modify_img_width,self.modify_img_height):
-            if volume_modify > 0:
-                volume_modify -= 1
-                Sound(assets,'volume_setting.wav',set_sound(0.7))
+            if volume > 0:
+                volume -= 1
+                Sound(assets,'volume_setting.wav',set_sound(0.7,volume,volume_max))
 
             #무기 변경 방식 설정
                 #숫자키로 변경
         if collide_with_point(mouse_x,mouse_y,self.c_box_n_x,self.c_box_nr_y,self.c_box_width,self.c_box_height):
             change_weapon_type = 0
-            Sound(assets,'click_button.wav',set_sound(0.7))
+            Sound(assets,'click_button.wav',set_sound(0.7,volume,volume_max))
                 #마우스 우클릭으로 변경
         elif collide_with_point(mouse_x,mouse_y,self.c_box_r_x,self.c_box_nr_y,self.c_box_width,self.c_box_height):
             change_weapon_type = 1
-            Sound(assets,'click_button.wav',set_sound(0.7))
+            Sound(assets,'click_button.wav',set_sound(0.7,volume,volume_max))
 
             #그래픽 설정
                 #저품질
         if collide_with_point(mouse_x,mouse_y,self.g_box_l_x,self.g_box_y,self.g_box_width,self.g_box_height):
             Graphic = 0
-            Sound(assets,'click_button.wav',set_sound(0.7))
+            Sound(assets,'click_button.wav',set_sound(0.7,volume,volume_max))
                 #고품질
         elif collide_with_point(mouse_x,mouse_y,self.g_box_h_x,self.g_box_y,self.g_box_width,self.g_box_height):
             Graphic = 1
-            Sound(assets,'click_button.wav',set_sound(0.7))
+            Sound(assets,'click_button.wav',set_sound(0.7,volume,volume_max))
 
             #시작 버튼
         if collide_with_point(mouse_x,mouse_y,self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y):
-            Sound(assets,'game_start.wav',set_sound(0.5))
+            Sound(assets,'game_start.wav',set_sound(0.5,volume,volume_max))
             main_menu_bool = False
 
     def update(self):
         #음량 값
-        self.v_text_num = text_set(gamefont,25,False,False,f"{volume_modify}",True,(255,255,255))
+        self.v_text_num = text_set(gamefont,25,False,False,f"{volume}",True,(255,255,255))
 
         #무기 변경 방식에 따른 박스 테두리 유무
         if change_weapon_type == 0:
@@ -1790,7 +1801,13 @@ class Main_Menu():
              pg.draw.rect(screen,(255,255,255),(self.g_box_l_x,self.g_box_y,self.g_box_width,self.g_box_height),3)
         elif Graphic == 1:
              pg.draw.rect(screen,(255,255,255),(self.g_box_h_x,self.g_box_y,self.g_box_width,self.g_box_height),3)
-    
+
+def ClassValueSetting() -> None: #차트 정리용
+    """
+    클래스 변수 선언하는 곳
+                    V V V
+    """
+
 #클래스 설정   
 player = Player()
 atteck_dir = Atteck_dir()
@@ -1807,8 +1824,16 @@ player_hurt = PlayerHurt()
 particle = Particle()
 blood_splash = BloodSplash()
 bomb_splash = BombSplash()
+lastzombie_effect = LastZombie_Effect()
+playerhealth_ui = PlayerHealth_UI()
 ui = UI()
 pause = Pause()
+
+def MainLoopSetting() -> None: #차트 정리용
+    """
+    메인루프 설정 하는 곳
+                    V V V
+    """
 
 if __name__ == '__main__':
     while not done:
@@ -1899,11 +1924,11 @@ if __name__ == '__main__':
                 Game()
                 Crash_Zombie(zombie_melee,zombie_shoot)
             else:   
-                GameOver(set_sound(1.7))               
+                GameOver(set_sound(1.7,volume,volume_max))               
             if pause.bool == False:               
                 pg.mixer.unpause()
-                Wave(set_sound(0.7))  
-                upgrade.sound(set_sound(2)) 
+                Wave(set_sound(0.7,volume,volume_max))  
+                upgrade.sound(set_sound(2,volume,volume_max)) 
                 upgrade.update(card_num)
             else:
                 pg.mixer.pause()
@@ -1968,6 +1993,12 @@ if __name__ == '__main__':
             blood_splash.object.clear()
             zombie_blood.list.clear()
             player_hurt.ph_e_transparent = 0
+            #업그레이드 항목
+            upgrade.firegun_level = 0
+            upgrade.knife_size_level = 0
+            upgrade.knife_cooltime_level = 0
+            upgrade.health_level = 0
+            upgrade.speed_level = 0
             
             ResetGame = False
         
