@@ -46,10 +46,6 @@ change_weapon_type = 0 # 0:숫자키로 바꾸기 1:마우스 우클릭으로 �
 firegun_time_startval = 60
 firegun_time = firegun_time_startval
     #칼
-knife_atteck_term_startval = 120
-knife_atteck_term = knife_atteck_term_startval
-knife_atteck_timelong = 10
-knife_cooltime = 0
 knife_increase_size = 0
     #좀비(근접)
 zombie_melee_spawntime = 90
@@ -234,6 +230,7 @@ class Atteck_dir:
         if special_weapon == False:
             current_img[0].set_colorkey((current_img[3]))
             screen.blit(self.result,(self.x-current_img[1]/2,self.y-current_img[2]/2))
+            
     def update(self):
         current_img = self.img[weapon]
         self.angle = math.atan2(mouse_y-player.centery, mouse_x-player.centerx)
@@ -332,30 +329,25 @@ class Knife:
         global knife_atteck_term, knife_atteck_timelong
         self.img = load_img(assets,'knife_hitbox.png').convert_alpha()
         self.width, self.height = self.img.get_size()
-        self.atteck_term = 0
         self.cooltime = 0
-        self.atteck_timelong = knife_atteck_timelong
-        self.atteck = False
-        self.swing = False #사운드용
+        self.cooltime_init = 120
+        self.AtteckingTime_init = 10
+        self.AtteckingTime = 0
 
     def Atteck(self):
-        global score,knife_increase_size
+        global score,knife_increase_size,between_wave
         self.img = pg.transform.scale(self.img,\
                 (self.width+knife_increase_size,self.height+knife_increase_size))
         #공격, 히트박스 위치 설정
-        global knife_atteck_term, knife_atteck_timelong
-        if self.atteck_term > 0:
-            self.atteck_term -= 1
+        if self.cooltime > 0:
+            self.cooltime -= 1
 
-        if click_left == True and self.atteck_term == 0 and weapon == 1 and special_weapon == False:
-            self.atteck = True
-            self.atteck_timelong = knife_atteck_timelong
-            self.atteck_term = knife_atteck_term
-
-            self.swing = True #사운드용
+        if click_left == True and self.cooltime == 0 and weapon == 1 and special_weapon == False:
+            self.AtteckingTime = self.AtteckingTime_init
+            self.cooltime = self.cooltime_init
             
-        if self.atteck == True and self.atteck_timelong > 0:
-            self.atteck_timelong -= 1
+        if self.AtteckingTime > 0:
+            self.AtteckingTime -= 1
             self.angle = math.atan2(mouse_y-player.centery, mouse_x-player.centerx)
             self.x = (50+knife_increase_size)*math.cos(self.angle) \
                                                 + player.centerx -(self.width+knife_increase_size)/2
@@ -379,20 +371,16 @@ class Knife:
                     Zs[5] -= 2
                     score += 100
         #히트박스 위치 초기화
-        if self.atteck_timelong == 0:
+        if self.AtteckingTime == 0:
             self.x, self.y = None, None
 
     def draw(self):
-        if self.atteck == True and self.atteck_timelong > 0:
+        if self.AtteckingTime > 0:
             screen.blit(self.img,(self.x, self.y))
 
     def sound(self,volume):
-        if self.atteck == True and self.atteck_timelong > 0 and self.swing == True:
-            knife_sound = pg.mixer.Sound(os.path.join(assets,'knife_sound.wav'))
-            pg.mixer.Sound.set_volume(knife_sound, volume)
-            knife_sound.play()
-
-            self.swing = False
+        if click_left == True and self.cooltime == self.cooltime_init and weapon == 1 and special_weapon == False:
+            Sound(assets,'knife_sound.wav',volume)
 
     def update(self):
         self.Atteck()   
@@ -815,6 +803,7 @@ class Zombie_shoot:
         self.Basic()
         self.Bullet()
 
+#체력바
 class PlayerHealth_UI:
     def __init__(self):
         self.img = load_img(assets,'PlayerHealth_UI.png').convert_alpha()
@@ -838,6 +827,20 @@ class PlayerHealth_UI:
         for i in range(int(max_health)-1 if player.health-int(max_health) == 0 else int(max_health)):
             line_x += self.board_width/int(max_health) if max_health-int(max_health) == 0 else int(max_health)+1
             pg.draw.line(screen,self.LineColor,(line_x,self.board_y),(line_x,self.board_y+self.board_height-3),2)
+
+#칼 쿨타임바
+class KnifeCooltime_UI:
+    def __init__(self):
+        self.board_width,self.board_height = 190, 25
+        self.board_x = middle(ph_ui.board_x+ph_ui.board_width,\
+                    screen_width-(ph_ui.board_x+ph_ui.board_width),self.board_width) #UI클래스의 T_knife
+        self.board_y = 50
+        self.board_color = (77, 135, 135)
+
+    def draw(self):
+        pg.draw.rect(screen,(126, 222, 226),[self.board_x,self.board_y,\
+                    self.board_width*(knife.cooltime/knife.cooltime_init),self.board_height])
+        pg.draw.rect(screen,self.board_color,[self.board_x,self.board_y,self.board_width,self.board_height],3)
 
 #좀비 죽었을 때 핏자국
 class ZombieBlood:
@@ -939,6 +942,54 @@ class LastZombie_Effect:
             self.size_update(i)
             self.delete(i)
     
+#카드 선택할 때 효과
+class CardSelect_Effect:
+    def __init__(self):
+        self.color = {'upgrade':(112, 163, 188),'heal':(79, 210, 102),'grenade':(255, 148, 0)}
+        self.object = []
+        self.speed = 10
+        self.increase_speed = 0.04
+
+    def spawn(self,x:float,y:float,speed:float,increase_speed:float,color):
+        size = screen_width/3
+        self.object.append([x,y,size,speed,increase_speed,color])
+                        #x:[0], y:[1], size[2], speed[3], increase_speed[4], color[5]
+
+    def Upgrade(self):
+        return cardselect_effect.spawn(0,0,cardselect_effect.speed,cardselect_effect.increase_speed,cardselect_effect.color['upgrade'])
+
+    def Heal(self):
+        return cardselect_effect.spawn(0,0,cardselect_effect.speed,cardselect_effect.increase_speed,cardselect_effect.color['heal'])
+
+    def Grenade(self):
+        return cardselect_effect.spawn(0,0,cardselect_effect.speed,cardselect_effect.increase_speed,cardselect_effect.color['grenade'])
+
+    def delete(self,i):
+        if i[2] <= 0:
+            self.object.remove(i)
+
+    def size_update(self,i):
+        i[2] -= i[3]
+        i[3] += i[4]
+    
+    def move(self,i):
+        i[0] = middle(player.x,player.width,0)
+        i[1] = middle(player.y,player.h_height,0)
+
+    def sound(self,volume):
+        #Sound(assets,'LastZombie_sound.wav',volume)
+        pass
+
+    def draw(self):
+        for i in self.object:
+            pg.draw.circle(screen,i[5],(i[0],i[1]),i[2],3)
+
+    def update(self):
+        for i in self.object:
+            self.size_update(i)
+            self.move(i)
+            self.delete(i)
+
 #피튀기는 효과
 class BloodSplash:
     def __init__(self):
@@ -1121,11 +1172,13 @@ class UI:
         '''text_health = text_set(gamefont, 50, False, False,f"{self.T_health[lg]} : {player.health:0.1f}/{max_health}", True, (254, 46, 66))
         screen.blit(text_health, (screen_width/2-(text_health.get_rect())[2]/2,50))'''
         #칼 쿨타임
-        text_k_cooltime = text_set(gamefont, self.T_knife[lg][1], False, True,f"{self.T_knife[lg][0]} : {knife.atteck_term/60:0.2f}", True, (126, 222, 226))
-        screen.blit(text_k_cooltime, (800,30))
+        text_k_cooltime = text_set(gamefont, self.T_knife[lg][1], False, True,f"{self.T_knife[lg][0]}", True, (126, 222, 226))
+        screen.blit(text_k_cooltime, (middle(ph_ui.board_x+ph_ui.board_width,\
+                    screen_width-(ph_ui.board_x+ph_ui.board_width),text_k_cooltime.get_size()[0]),20))
         #수류탄 개수
         text_bomb = text_set(gamefont, 30, False, True,f"{self.T_grenade[lg]} : {special_weapon_have}", True, (10, 138, 124))
-        screen.blit(text_bomb, (800,75))
+        screen.blit(text_bomb, (middle(ph_ui.board_x+ph_ui.board_width,\
+                    screen_width-(ph_ui.board_x+ph_ui.board_width),text_bomb.get_size()[0]),90))
         #웨이브
         text_wave = text_set(gamefont, 30, False, True,f"{self.T_wave[lg]} : {wave}", True, set_color)
         screen.blit(text_wave, (180,30))
@@ -1159,6 +1212,7 @@ def Game():
             blood_splash.update()
             bomb_splash.update()
             lastzombie_effect.update()
+            cardselect_effect.update()
             
             #사운드 (wave사운드는 맨 Wave함수와 묶음)
             bullet.sound(set_sound(0.1,volume,volume_max))
@@ -1170,6 +1224,7 @@ def Game():
         
         #그리기
         lastzombie_effect.draw()
+        cardselect_effect.draw()
         zombie_blood.draw()
         bullet.draw()
         atteck_dir.draw()
@@ -1184,7 +1239,8 @@ def Game():
         bomb.draw()
         particle.draw()
         ui.draw()
-        playerhealth_ui.draw()
+        ph_ui.draw()
+        kc_ui.draw()
         target_mouse.draw()
         
         #클릭
@@ -1244,7 +1300,7 @@ def Wave(volume):
 
         #웨이브 알림
         text_wave = text_set('Times new Roman',150, True, False,f"WAVE {wave}", True, set_color)
-        text_ZombieLeft = text_set(gamefont,30, False, True,f"{int(Z_left)} {T_ZombieLeft[lg]}", True, (71,200,62))
+        text_ZombieLeft = text_set(gamefont,30, False, True,f"{int(Z_left)} {T_ZombieLeft[lg]}", True, (213,213,213))
         text_wave.set_alpha(wave_fontalpha)
         text_ZombieLeft.set_alpha(wave_fontalpha)
         screen.blit(text_wave,(middle(0,screen_width,text_wave.get_size()[0]),\
@@ -1267,7 +1323,7 @@ class Upgrade:
         self.pos = []
         self.card = []
         self.card_appear = True
-        self.select_card = False
+        self.select_card = -1
         self.pressing_mouse_initialval = 2
         self.pressing_mouse = 0 #눌렀을 때 초기값 됨, 뗐을 때 0까지 1틱당 1씩 줄어듬
         self.add_card = False
@@ -1319,6 +1375,7 @@ class Upgrade:
         sc = self.select_card
         if sc == 0:  #공격 속도 증가
             sc0 = 5.5
+            cardselect_effect.Upgrade()
             if self.firegun_level < self.maxlevel:
                 self.firegun_level += 1
                 firegun_time -= sc0
@@ -1326,6 +1383,7 @@ class Upgrade:
                 special_weapon_have += 1
         elif sc == 1:  #칼 크기 증가
             sc1 = 8
+            cardselect_effect.Upgrade()
             if self.knife_size_level < self.maxlevel:
                 self.knife_size_level += 1
                 knife_increase_size += sc1
@@ -1333,21 +1391,26 @@ class Upgrade:
                 special_weapon_have += 1
         elif sc == 2: #칼 쿨타임 감소
             sc2 = 9
+            cardselect_effect.Upgrade()
             if self.knife_cooltime_level < self.maxlevel:
                 self.knife_cooltime_level += 1
-                knife_atteck_term -= sc2
+                knife.cooltime_init -= sc2
             else:
                 special_weapon_have += 1
         elif sc == 3: #수류탄 +2
             special_weapon_have += 2
+            cardselect_effect.Grenade()
         elif sc == 4: #힐(최대체력의 50%)
             player.health += max_health//2
             if player.health > max_health:
                 player.health = max_health
+            cardselect_effect.Heal()
         elif sc == 5: #힐(100%)
             player.health = max_health
+            cardselect_effect.Heal()
         elif sc == 6: #최대 체력 증가
             sc6 = 1
+            cardselect_effect.Upgrade()
             if self.health_level < self.maxlevel:
                 health_percent = player.health/max_health
                 max_health += sc6
@@ -1357,6 +1420,7 @@ class Upgrade:
                 special_weapon_have += 1
         elif sc == 7: #이동속도 증가
             sc7 = 0.3
+            cardselect_effect.Upgrade()
             if self.speed_level < self.maxlevel:
                 self.speed_level += 1
                 player.normal_speed += sc7
@@ -1825,7 +1889,9 @@ particle = Particle()
 blood_splash = BloodSplash()
 bomb_splash = BombSplash()
 lastzombie_effect = LastZombie_Effect()
-playerhealth_ui = PlayerHealth_UI()
+cardselect_effect = CardSelect_Effect()
+ph_ui = PlayerHealth_UI()
+kc_ui = KnifeCooltime_UI()
 ui = UI()
 pause = Pause()
 
