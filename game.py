@@ -1,5 +1,5 @@
 #-*- coding:utf-8 -*-
-import pygame as pg, os, time, random, math, sys
+import pygame as pg, os, time, random, math, sys, webbrowser
 from 함수 import *
 
 pg.init()
@@ -95,7 +95,7 @@ Graphic = 1 # 0:저품질 1:고품질
 ResetGame = False
 FPS = 60
 fps_proportion = 60/FPS
-lg = 0 #language 0:eng 1:kr
+lg = 1 #language 0:eng 1:kr
 
 #플레이어
 class Player:
@@ -388,7 +388,7 @@ class Knife:
 #특수무기(수류탄)
 class Bomb:
     def __init__(self):
-        self.img = load_img(assets,'bomb.png')
+        self.img = load_img(assets,'bomb.png').convert()
         self.img.set_colorkey((255,255,255))     
         self.width, self.height = self.img.get_size()   
         self.f_img = load_img(assets,'fallingpos.png').convert_alpha()
@@ -583,10 +583,10 @@ class Zombie_melee:
                 self.list.remove(Zmp)
 
     def move(self):   
-        for Zm in self.list:
+        for Zm in self.list: #Zm:근접좀비
             Zm[0] += Zm[2] 
             Zm[1] += Zm[3]
-            Zm[4] = math.atan2(player.y-Zm[1],player.x-Zm[0])
+            Zm[4] = math.atan2(player.y-Zm[1],player.x-Zm[0]) #라디안
             Zm[2] = math.cos(Zm[4])*self.speed*fps_proportion
             Zm[3] = math.sin(Zm[4])*self.speed*fps_proportion   
 
@@ -834,7 +834,7 @@ class KnifeCooltime_UI:
         self.board_width,self.board_height = 190, 25
         self.board_x = middle(ph_ui.board_x+ph_ui.board_width,\
                     screen_width-(ph_ui.board_x+ph_ui.board_width),self.board_width) #UI클래스의 T_knife
-        self.board_y = 50
+        self.board_y = 55
         self.board_color = (77, 135, 135)
 
     def draw(self):
@@ -861,7 +861,7 @@ class ZombieBlood:
             screen.blit(rect_alpha(self.width,self.height,(255,0,0),150),[i[0],i[1]])
 
 #배경 파티클
-class Particle():
+class Particle:
     def __init__(self):
         self.object = []
         self.color = (0,0,0)
@@ -1176,7 +1176,7 @@ class UI:
         screen.blit(text_k_cooltime, (middle(ph_ui.board_x+ph_ui.board_width,\
                     screen_width-(ph_ui.board_x+ph_ui.board_width),text_k_cooltime.get_size()[0]),20))
         #수류탄 개수
-        text_bomb = text_set(gamefont, 30, False, True,f"{self.T_grenade[lg]} : {special_weapon_have}", True, (10, 138, 124))
+        text_bomb = text_set(gamefont, 30, False, True,f"{self.T_grenade[lg]} : {special_weapon_have}", True, (255, 127, 0))
         screen.blit(text_bomb, (middle(ph_ui.board_x+ph_ui.board_width,\
                     screen_width-(ph_ui.board_x+ph_ui.board_width),text_bomb.get_size()[0]),90))
         #웨이브
@@ -1428,19 +1428,29 @@ class Upgrade:
                 special_weapon_have += 1
 
     def UpgradeList(self):
+        T_SSpeed = [("increase shooting speed",11),("총 공격 속도 증가",15)]
+        T_KSize = [("increase knife size",14),("칼 크기 증가",15)]
+        T_KCool = [("decrease knife cooltime",10),("칼 쿨타임 감소",15)]
+        T_G = [("grenade +2",15),("수류탄 +2",15)]
+        T_Hh = [("heal (50% of max health)",10),("힐(최대체력의 50%)",15)]
+        T_Hf = [("heal (100%)",15),("힐 (100%)",15)]
+        T_MH = [("increase max health",12),("최대 체력 증가",15)]
+        T_PS = [("increase moving speed",11),("이동 속도 증가",15)] 
+
         self.upgrade_list = []
-        self.upgrade_list.append(["총 공격 속도 증가",f"{self.firegun_level}/{self.maxlevel} level"]) #0
-        self.upgrade_list.append(["칼 크기 증가",f"{self.knife_size_level}/{self.maxlevel} level"]) #1
-        self.upgrade_list.append(["칼 쿨타임 감소",f"{self.knife_cooltime_level}/{self.maxlevel} level"]) #2
-        self.upgrade_list.append(["수류탄 +2"]) #3
-        self.upgrade_list.append(["힐(최대체력의 50%)"]) #4
-        self.upgrade_list.append(["힐(100%)"]) #5
-        self.upgrade_list.append(["최대 체력 증가",f"{self.health_level}/{self.maxlevel} level"]) #6
-        self.upgrade_list.append(["이동속도 증가",f"{self.speed_level}/{self.maxlevel} level"]) #7
+        self.upgrade_list.append([(T_SSpeed[lg][0],T_SSpeed[lg][1]),f"{self.firegun_level}/{self.maxlevel} level"]) #0
+        self.upgrade_list.append([(T_KSize[lg][0],T_KSize[lg][1]),f"{self.knife_size_level}/{self.maxlevel} level"]) #1
+        self.upgrade_list.append([(T_KCool[lg][0],T_KCool[lg][1]),f"{self.knife_cooltime_level}/{self.maxlevel} level"]) #2
+        self.upgrade_list.append([(T_G[lg][0],T_G[lg][1])]) #3
+        self.upgrade_list.append([(T_Hh[lg][0],T_Hh[lg][1])]) #4
+        self.upgrade_list.append([(T_Hf[lg][0],T_Hf[lg][1])]) #5
+        self.upgrade_list.append([(T_MH[lg][0],T_MH[lg][1]),f"{self.health_level}/{self.maxlevel} level"]) #6
+        self.upgrade_list.append([(T_PS[lg][0],T_PS[lg][1]),f"{self.speed_level}/{self.maxlevel} level"]) #7
 
     def UpgradeItem_Text(self):
         if self.UpgradeItem_text_VisibleTime > 0:
-            text = text_set(gamefont,20,False,True,str(self.upgrade_list[self.select_card][0]),True,(50,216,255))
+            text = text_set(gamefont,self.upgrade_list[self.select_card][0][1],False,True,\
+                                self.upgrade_list[self.select_card][0][0],True,(50,216,255))
             text_width,text_height = text.get_size()
 
             if self.UpgradeItem_text_VisibleTime <= 30:
@@ -1463,7 +1473,8 @@ class Upgrade:
 
         for cd in self.card:
             cd_index = self.card.index(cd)
-            text_ug_des = text_set(gamefont, 15, False, False,f"{self.upgrade_list[self.card[cd_index]][0]}",True,(255,255,255))
+            text_ug_des = text_set(gamefont, self.upgrade_list[self.card[cd_index]][0][1], False, False,\
+                                    f"{self.upgrade_list[self.card[cd_index]][0][0]}",True,(255,255,255))
             try:
                 middle_font_x = self.pos[cd_index][0]+(self.width-text_ug_des.get_size()[0])/2
                 middle_font_y = self.pos[cd_index][1]+(self.height-text_ug_des.get_size()[1])/2
@@ -1471,8 +1482,9 @@ class Upgrade:
 
                 text_ug_level = text_set(gamefont, 15, False, False, f"{self.upgrade_list[self.card[cd_index]][1]}", True, (0,216,255))
                 screen.blit(text_ug_level, (middle_font_x+(text_ug_des.get_size()[0]-text_ug_level.get_size()[0])/2,middle_font_y+30)) 
-
-                text_detail_des = text_set(gamefont, 25, False, True, "최고 레벨인 카드를 선택할 시 수류탄 +1", True, (166,166,166))
+                
+                T_ML = ["+1 grenade when choosing highest level card","최고 레벨인 카드를 선택할 시 수류탄 +1"]
+                text_detail_des = text_set(gamefont, 25, False, True, T_ML[lg], True, (166,166,166))
                 screen.blit(text_detail_des, ((screen_width-text_detail_des.get_size()[0])/2,500+UIbar_height))    
             except:pass
     
@@ -1565,16 +1577,20 @@ class Pause:
 
         #텍스트 
             #설정,크기
-        self.T_pause = text_set(gamefont,25,False,False,"일시정지",True,self.BoxLine_color)
+        T_P = ["pause","일시정지"]
+        self.T_pause = text_set(gamefont,25,False,False,T_P[lg],True,self.BoxLine_color)
         self.T_pause_width,self.T_pause_height = self.T_pause.get_size()
 
-        self.T_Restart = text_set(gamefont,25,False,False,"재시작",True,(255,255,255))
+        T_R = ["restart","재시작"]
+        self.T_Restart = text_set(gamefont,25,False,False,T_R[lg],True,(255,255,255))
         self.T_Restart_width,self.T_Restart_height = self.T_Restart.get_size()
 
-        self.T_Mainmenu = text_set(gamefont,25,False,False,"메인 메뉴",True,(255,255,255))
+        T_M = ["main menu","메인 메뉴"]
+        self.T_Mainmenu = text_set(gamefont,25,False,False,T_M[lg],True,(255,255,255))
         self.T_Mainmenu_width,self.T_Mainmenu_height = self.T_Mainmenu.get_size()
-
-        self.T_description = text_set(gamefont,25,False,False,"ESC로 취소",True,(140,140,140))
+        
+        T_E = ["press 'ESC' to cancle","ESC로 취소"]
+        self.T_description = text_set(gamefont,25,False,False,T_E[lg],True,(140,140,140))
         self.T_description_width,self.T_description_height = self.T_description.get_size()
             #좌표
         self.T_pause_x = middle(self.board_x,self.board_width,self.T_pause_width)
@@ -1758,7 +1774,13 @@ class Main_Menu:
             #박스 길이
         self.s_box_long_x = self.s_box_distance_x*2+self.s_text_width
         self.s_box_long_y = self.s_box_distance_y*2+self.s_text_height
-        
+
+        #아직 완성된 게임이 아닙니다.
+        self.not_c_text = text_set(gamefont,20,False,False,'아직 100% 완성된 게임이 아닙니다.(게임 정보를 보려면 클릭)',True,(103, 153, 255))
+        self.not_c_width,self.not_c_height = self.not_c_text.get_size()
+        self.not_c_x = screen_width-self.not_c_width-10
+        self.not_c_y = screen_height+UIbar_height-self.not_c_height-15
+
     def draw(self):
         #배경
         screen.fill(black)
@@ -1809,6 +1831,9 @@ class Main_Menu:
             #박스
         pg.draw.rect(screen,(230, 233, 6),(self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y),3)    
 
+        #아직 완성된 게임이 아닙니다.
+        screen.blit(self.not_c_text,(self.not_c_x,self.not_c_y))
+
     def click(self):
         global volume,volume_max,main_menu_bool,change_weapon_type,Graphic
         mouse_x = pg.mouse.get_pos()[0]
@@ -1849,6 +1874,10 @@ class Main_Menu:
         if collide_with_point(mouse_x,mouse_y,self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y):
             Sound(assets,'game_start.wav',set_sound(0.5,volume,volume_max))
             main_menu_bool = False
+
+            #아직 완성된 게임이 아닙니다.
+        if collide_with_point(mouse_x,mouse_y,self.not_c_x,self.not_c_y,self.not_c_width,self.not_c_height):
+            webbrowser.open('https://www.instagram.com/jiyong._.06/')
 
     def update(self):
         #음량 값
@@ -2065,6 +2094,7 @@ if __name__ == '__main__':
             upgrade.knife_cooltime_level = 0
             upgrade.health_level = 0
             upgrade.speed_level = 0
+            upgrade.select_card = -1
             
             ResetGame = False
         
