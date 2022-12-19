@@ -30,8 +30,9 @@ try:
     score_data = pickle.load(f_s)
 except:
     f_s = open("score data.txt",'wb')
-    score_data = (0,0)
+    score_data = [0,0]
     pickle.dump(score_data, f_s)
+f_s.close()
 print(score_data)
 
 def ValueSetting() -> None: #차트 정리용
@@ -1187,7 +1188,7 @@ class UI:
         screen.blit(text_k_cooltime, (middle(ph_ui.board_x+ph_ui.board_width,\
                     screen_width-(ph_ui.board_x+ph_ui.board_width),text_k_cooltime.get_size()[0]),20))
         #수류탄 개수
-        text_bomb = text_set(gamefont, 30, False, True,f"{self.T_grenade[lg]} : {special_weapon_have}", True, (255, 127, 0))
+        text_bomb = text_set(gamefont, 30, False, True,f"{self.T_grenade[lg]} : {special_weapon_have}", True, (227, 134, 7))
         screen.blit(text_bomb, (middle(ph_ui.board_x+ph_ui.board_width,\
                     screen_width-(ph_ui.board_x+ph_ui.board_width),text_bomb.get_size()[0]),90))
         #웨이브
@@ -1535,7 +1536,7 @@ def GameOver(volume):
     if player.health <= 0:
         screen.fill((background_color))
 
-        SaveScore(score_data,wave,score)
+        SaveScore(wave,score)
 
         #line
         pg.draw.rect(screen,(91,91,91),(0,0,screen_width,screen_height+UIbar_height),7)
