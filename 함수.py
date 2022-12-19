@@ -89,11 +89,19 @@ def distinguish_sign(value):
     return result
 
 #점수저장
-def SaveScore(score_data,*score):
+def SaveScore(*lastest_score):
     """
     score_data는 점수를 저장할 변수
      *score 부터는 저장할 점수값을 차례대로 넣는다.
     """
+    f = open("score data.txt",'rb')
+    score_data = list(pickle.load(f))
+
+    for i in range(len(lastest_score)):
+        if lastest_score[i] > score_data[i]:
+            score_data[i] = lastest_score[i]
+
     f = open("score data.txt",'wb')
-    score_data = score
     pickle.dump(score_data,f)
+
+    f.close()
