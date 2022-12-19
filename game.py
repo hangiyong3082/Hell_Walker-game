@@ -1,5 +1,5 @@
 #-*- coding:utf-8 -*-
-import pygame as pg, os, time, random, math, sys, webbrowser
+import pygame as pg, os, time, random, math, sys, webbrowser, pickle
 from 함수 import *
 
 pg.init()
@@ -20,9 +20,19 @@ clock = pg.time.Clock()
 done = False
 
 #폰트
-gamefont = ['한컴산뜻돋움','nanumgothic','hy견고딕','gulim']
+gamefont = ['한컴산뜻돋움','한컴산뜻돋움 Bold','nanumgothic','hy견고딕','gulim']
 
 AvailableGameFont_Set(gamefont)
+
+#점수값이 있으면 로드, 없으면 0으로 저장
+try:
+    f_s = open("score data.txt",'rb')
+    score_data = pickle.load(f_s)
+except:
+    f_s = open("score data.txt",'wb')
+    score_data = (0,0)
+    pickle.dump(score_data, f_s)
+print(score_data)
 
 def ValueSetting() -> None: #차트 정리용
     """
@@ -1152,6 +1162,7 @@ def Click(u):
         if u.pressing_mouse > 0:
             u.pressing_mouse -= 1
 
+#UI
 class UI:
     def __init__(self):
         self.T_health = ["health","체력"]
@@ -1244,7 +1255,7 @@ def Game():
         target_mouse.draw()
         
         #클릭
-        Click(upgrade)
+        #Click(upgrade)
 
         #체력이 적을 때 효과
         #Almostdie()
@@ -1520,9 +1531,12 @@ class Upgrade:
 
 #게임 오버
 def GameOver(volume):
-    global special_weapon,gameover_sound_play
+    global special_weapon,gameover_sound_play,score_data
     if player.health <= 0:
         screen.fill((background_color))
+
+        SaveScore(score_data,wave,score)
+
         #line
         pg.draw.rect(screen,(91,91,91),(0,0,screen_width,screen_height+UIbar_height),7)
         #text
