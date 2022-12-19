@@ -1,4 +1,4 @@
-import pygame as pg, os, time, random, math, sys
+import pygame as pg, os, time, random, math, sys, webbrowser, pickle
 
 def change_dir(path): #경로 설정
     os.chdir(path)
@@ -87,3 +87,13 @@ def distinguish_sign(value):
     elif value == 0:result = 0
 
     return result
+
+#점수저장
+def SaveScore(score_data,*score):
+    """
+    score_data는 점수를 저장할 변수
+     *score 부터는 저장할 점수값을 차례대로 넣는다.
+    """
+    f = open("score data.txt",'wb')
+    score_data = score
+    pickle.dump(score_data,f)
