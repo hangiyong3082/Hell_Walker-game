@@ -91,8 +91,7 @@ def distinguish_sign(value):
 #점수저장
 def SaveScore(*lastest_score):
     """
-    score_data는 점수를 저장할 변수
-     *score 부터는 저장할 점수값을 차례대로 넣는다.
+    *score : 저장할 점수값을 차례대로 넣는다.
     """
     f = open("score data.txt",'rb')
     score_data = list(pickle.load(f))
