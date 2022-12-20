@@ -22,8 +22,7 @@ def AvailableGameFont_Set(gamefont:list) -> str:
     for f in gamefont:
         for i in pg.font.get_fonts():
             if f == i:
-                try:gamefont = gamefont[gamefont.index(f)]
-                except:pass
+                gamefont = f
                 break
 
 #텍스트 함수
