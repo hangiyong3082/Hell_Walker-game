@@ -68,23 +68,23 @@ zombie_shoot_shooting_time = 110
 score = 0
     #시간제 점수 시간
 Time = 60
-    #스폰 수
+    #스폰 수 (삭제 예정)
 zm_spawn = 4
 zs_spawn = 1
 zm_spawn_startval = zm_spawn
 zs_spawn_startval = zs_spawn
 zm_spawncount = zm_spawn
 zs_spawncount = zs_spawn
-    #남은 좀비 수
+    #남은 좀비 수 (삭제 예정)
 Z_left = 0
-    #웨이브
+    #웨이브 (wave 빼고 삭제 예정)
 wave = 0
 wave_time = 0
 wave_killzombie = 0
 wave_fontalpha = 255
 between_wave = 60
 wave_fontdraw = False
-    #수류탄
+    #수류탄 (have빼고 삭제 예정)
 special_weapon_click = 1
 special_weapon_availabletime = 0
 special_weapon_have = 3
@@ -93,8 +93,6 @@ Upgrading = False
     #사운드
 volume_max = 10
 volume = 5
-    #메뉴
-main_menu_bool = True
     #게임
 Graphic = 1 # 0:저품질 1:고품질
 ResetGame = False
@@ -1187,7 +1185,7 @@ class UI:
 #게임
 def Game():
     global wave_time,Upgrading
-    if main_menu_bool == False:
+    if main_menu.bool == False:
         if Upgrading == False and pause.bool == False:
             #시간
             #Timegoing()
@@ -1672,12 +1670,13 @@ class Pause:
             ResetGame = True
             self.bool = False
             pg.mixer.stop()
-            main_menu_bool = True
+            main_menu.bool = True
 
 #메뉴       
 class Main_Menu:
     def __init__(self):
         gray = (189,189,189)
+        self.bool = True
         #배경
         self.bg_img = load_img(assets,'menu_bg.png').convert_alpha()
         #타이틀
@@ -1888,7 +1887,7 @@ class Main_Menu:
         screen.blit(self.not_c_text,(self.not_c_x,self.not_c_y))
 
     def click(self):
-        global volume,volume_max,main_menu_bool,change_weapon_type,Graphic,score_data
+        global volume,volume_max,change_weapon_type,Graphic,score_data
         mouse_x = pg.mouse.get_pos()[0]
         mouse_y = pg.mouse.get_pos()[1]
 
@@ -1927,7 +1926,7 @@ class Main_Menu:
             #시작 버튼
         if collide_with_point(mouse_x,mouse_y,self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y):
             Sound(assets,'game_start.wav',set_sound(0.5,volume,volume_max))
-            main_menu_bool = False
+            self.bool = False
 
             #아직 완성된 게임이 아닙니다.
         if collide_with_point(mouse_x,mouse_y,self.not_c_x,self.not_c_y,self.not_c_width,self.not_c_height):
@@ -2016,18 +2015,18 @@ if __name__ == '__main__':
                     press_y_list.append(player.speed)
                     press_down = True
                 
-                if change_weapon_type == 0:  #숫자키로 바꿈
-                    if event.key == pg.K_1:  #총
-                        weapon = 0
-                        special_weapon = False  #칼
-                    if event.key == pg.K_2:
-                        weapon = 1
-                        special_weapon = False     
+                #숫자키로 무기변경
+                if event.key == pg.K_1:  #총
+                    weapon = 0
+                    special_weapon = False  #칼
+                if event.key == pg.K_2:
+                    weapon = 1
+                    special_weapon = False     
                 if event.key == pg.K_g:
                     special_weapon = True
 
                 if event.key == pg.K_ESCAPE:
-                    if not main_menu_bool:
+                    if not main_menu.bool:
                         pause.bool = True if pause.bool==False else False
                 
             if event.type == pg.KEYUP:
@@ -2051,7 +2050,7 @@ if __name__ == '__main__':
                         
             if event.type == pg.MOUSEBUTTONUP:
                 if event.button == pg.BUTTON_LEFT:
-                    if main_menu_bool:
+                    if main_menu.bool:
                         main_menu.click()
                     if pause.bool == True:
                         pause.click()
@@ -2060,13 +2059,13 @@ if __name__ == '__main__':
                     if gameover.bool == True:
                         gameover.click()
 
+                #마우스 우클릭으로 무기변경
                 if event.button == pg.BUTTON_RIGHT:
-                    if not main_menu_bool and Upgrading == False:
-                        if change_weapon_type == 1:
-                            if weapon == 0: 
-                                weapon = 1
-                            else:
-                                weapon = 0   
+                    if not main_menu.bool and Upgrading == False:
+                        if special_weapon == True:
+                            special_weapon = False
+                        else:
+                            weapon = 0 if weapon == 1 else 1 #toggle            
 
         if pg.mouse.get_pressed()[0] == True:
             click_left = True
@@ -2080,7 +2079,7 @@ if __name__ == '__main__':
 
         mouse_x, mouse_y = pg.mouse.get_pos()
 
-        if not main_menu_bool: 
+        if not main_menu.bool: 
             if not player.health <= 0:
                 Game()
                 Crash_Zombie(zombie_melee,zombie_shoot)
