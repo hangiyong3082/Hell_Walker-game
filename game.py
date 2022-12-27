@@ -4,6 +4,8 @@ from 함수 import *
 
 pg.init()
 
+change_dir('.')
+
 #기본 세팅
 screen_width = 1200
 screen_height = 650
@@ -92,12 +94,10 @@ special_weapon_have = 3
     #최대체력
 max_health = 5
     #업그레이드
-card_num = random.randint(2,3)
 Upgrading = False
     #사운드
 volume_max = 10
 volume = 5
-gameover_sound_play = 0
     #메뉴
 main_menu_bool = True
     #게임
@@ -131,6 +131,11 @@ class Player:
         #체력 적을 때
         self.AlmostDie_img = load_img(assets,'AlmostDie.png').convert_alpha()
         self.AlmostDie_width,self.AlmostDie_height = self.AlmostDie_img.get_size()
+        #맞았을 때 효과
+        self.ph_e_img = load_img(assets,'player_hurt.png').convert()
+        self.ph_e_appear = False
+        self.ph_e_transparent_initval = 150
+        self.ph_e_transparent = self.ph_e_transparent_initval
 
     def move(self):
         #좌우 방향키와 상하 방향키를 같이 누른다면 속도 감소
@@ -191,6 +196,17 @@ class Player:
             self.walk_sound -= 1
         else:
             self.walk_sound = self.walk_sound_initval
+
+    def hurt_effect(self):
+        if self.ph_e_appear:
+            if self.ph_e_transparent > 0:
+                self.ph_e_img.set_alpha(self.ph_e_transparent)
+                screen.blit(self.ph_e_img,(player.x,player.y))
+                self.ph_e_transparent -= 2
+            else:
+                self.ph_e_transparent = self.ph_e_transparent_initval
+                self.ph_e_img.set_alpha(self.ph_e_transparent)
+                self.ph_e_appear = False
 
     def update(self):
         self.move()
@@ -521,11 +537,6 @@ class Zombie_melee:
         self.crashbox = load_img(assets,'zombie_1_crashbox.png').convert_alpha()
         self.c_rect = self.crashbox.get_rect()
         self.c_width,self.h_height = self.crashbox.get_size()
-        #플레이어 데미지 표시
-        self.ph_e_img = load_img(assets,'player_hurt.png').convert()
-        self.ph_e_appear = False
-        self.ph_e_transparent_initval = 150
-        self.ph_e_transparent = self.ph_e_transparent_initval
         #플레이어 데미지 사운드
         self.ph_sound = False
 
@@ -573,10 +584,10 @@ class Zombie_melee:
                     player.health -= 1
                     blood_splash.spawn(player.x,player.y,3,3,(255,0,0))
                     score -= 100
-                    Zmp[6] = zombie_melee_crash_player_time    
-                    self.ph_e_appear = True     
-                    self.ph_sound = True    
-                    self.ph_e_transparent = self.ph_e_transparent_initval
+                    Zmp[6] = zombie_melee_crash_player_time        
+                    self.ph_sound = True  
+                    player.ph_e_appear = True   
+                    player.ph_e_transparent = player.ph_e_transparent_initval
                     player_hurt.ph_e_transparent = player_hurt.ph_e_transparent_initval
             if Zmp[6] != 0:
                 Zmp[6] -= 1
@@ -635,17 +646,6 @@ class Zombie_melee:
             Sound(assets,'player_hurt_sound.wav',volume_ph)
             self.ph_sound = False
 
-    def player_hurt_effect(self):
-        if self.ph_e_appear:
-            if self.ph_e_transparent > 0:
-                self.ph_e_img.set_alpha(self.ph_e_transparent)
-                screen.blit(self.ph_e_img,(player.x,player.y))
-                self.ph_e_transparent -= 2*fps_proportion
-            else:
-                self.ph_e_transparent = self.ph_e_transparent_initval
-                self.ph_e_img.set_alpha(self.ph_e_transparent)
-                self.ph_e_appear = False
-
     def update(self):
         self.spawn()
         self.move()
@@ -677,11 +677,6 @@ class Zombie_shoot:
         self.b_width, self.b_height = self.b_img.get_size()
         self.b_speed = 7
         self.shooting_time = zombie_shoot_shooting_time
-        #플레이어 데미지 표시
-        self.ph_e_img = load_img(assets,'player_hurt.png').convert()
-        self.ph_e_appear = False
-        self.ph_e_transparent_initval = 150
-        self.ph_e_transparent = self.ph_e_transparent_initval
         #플레이어 데미지 사운드
         self.ph_sound = False
 
@@ -763,10 +758,10 @@ class Zombie_shoot:
                 self.bullet.remove(Zb)
                 player.health -= 1
                 blood_splash.spawn(player.x,player.y,3,3,(255,0,0))
-                score -= 100
-                self.ph_e_appear = True     
-                self.ph_sound = True    
-                self.ph_e_transparent = self.ph_e_transparent_initval    
+                score -= 100    
+                self.ph_sound = True
+                player.ph_e_appear = True     
+                player.ph_e_transparent = player.ph_e_transparent_initval    
                 player_hurt.ph_e_transparent = player_hurt.ph_e_transparent_initval           
         
     def draw(self):
@@ -795,18 +790,7 @@ class Zombie_shoot:
         if self.ph_sound:
             Sound(assets,'player_hurt_sound.wav',volume_ph)
             self.ph_sound = False
-    
-    def player_hurt_effect(self):
-        if self.ph_e_appear:
-            if self.ph_e_transparent > 0:
-                self.ph_e_img.set_alpha(self.ph_e_transparent)
-                screen.blit(self.ph_e_img,(player.x,player.y))
-                self.ph_e_transparent -= 2
-            else:
-                self.ph_e_transparent = self.ph_e_transparent_initval
-                self.ph_e_img.set_alpha(self.ph_e_transparent)
-                self.ph_e_appear = False
-            
+          
     def update(self):
         self.spawn()
         self.Basic()
@@ -1240,8 +1224,7 @@ def Game():
         atteck_dir.draw()
         zombie_shoot.draw()
         player.draw()
-        zombie_melee.player_hurt_effect()
-        zombie_shoot.player_hurt_effect()
+        player.hurt_effect()
         zombie_melee.draw()
         knife.draw()
         blood_splash.draw()
@@ -1533,6 +1516,7 @@ class Upgrade:
 class GameOver:
     def __init__(self):
         self.gameover_sound_play = 0
+        self.save_count = 0
         self.bool = False
         
         #재시작 버튼
@@ -1550,8 +1534,6 @@ class GameOver:
         global special_weapon,gameover_sound_play,score_data
         if player.health <= 0:
             screen.fill((background_color))
-
-            SaveScore(wave,score)
 
             #line
             pg.draw.rect(screen,(91,91,91),(0,0,screen_width,screen_height+UIbar_height),7)
@@ -1578,17 +1560,23 @@ class GameOver:
         if collide_with_point(mouse_x,mouse_y,self.rb_box_x,self.rb_box_y,self.rb_box_width,self.rb_box_height):
             ResetGame = True
             self.bool = False
-            pg.mixer.stop()
+            self.gameover_sound_play = 0
+            self.save_count = 0
             Wave(set_sound(0.7,volume,volume_max))
 
     def sound(self,volume):
-        if self.gameover_sound_play <= 1:
+        if self.gameover_sound_play <= 2:
             self.gameover_sound_play += 1
-        if self.gameover_sound_play == 1:
+        if self.gameover_sound_play == 2:
             Sound(assets,'player_die_sound.wav',volume)
 
     def update(self):
         pg.mouse.set_visible(True)
+        
+        if self.save_count <= 2:
+            self.save_count += 1
+        if self.save_count == 2:
+            SaveScore(wave,score)
 
 #일시정지 메뉴
 class Pause:
@@ -1845,7 +1833,7 @@ class Main_Menu:
 
         #배경
         screen.fill((25,25,25))
-        pg.draw.rect(screen,set_color,(0,0,screen_width,screen_height+UIbar_height),5)
+        #pg.draw.rect(screen,set_color,(0,0,screen_width,screen_height+UIbar_height),5)
 
         #타이틀
         screen.blit(self.title_glow,((screen_width-self.title_width)/2,0))
@@ -2096,8 +2084,11 @@ if __name__ == '__main__':
             if not player.health <= 0:
                 Game()
                 Crash_Zombie(zombie_melee,zombie_shoot)
+                gameover.bool = False
+                gameover.gameover_sound_play = 0
             else:   
                 gameover.bool = True
+            if gameover.bool == True:
                 gameover.draw()
                 gameover.sound((set_sound(1.7,volume,volume_max)))      
                 gameover.update()        
@@ -2166,6 +2157,8 @@ if __name__ == '__main__':
             #플레이어
             player.health = 5
             player.speed = player.speed_init
+            #플레이어 맞음 효과
+            player.ph_e_transparent = 0
             #피 효과
             blood_splash.object.clear()
             zombie_blood.list.clear()
