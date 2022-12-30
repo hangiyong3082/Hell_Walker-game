@@ -53,9 +53,6 @@ click_left, click_right = False,False
     #무기
 weapon = 1
 special_weapon = False
-change_weapon_type = 0 # 0:숫자키로 바꾸기 1:마우스 우클릭으로 바꾸기
-    #칼
-knife_increase_size = 0
     #좀비(근접)
 zombie_melee_spawntime = 90
 zombie_melee_crash_player_time = 60
@@ -68,22 +65,8 @@ zombie_shoot_shooting_time = 110
 score = 0
     #시간제 점수 시간
 Time = 60
-    #스폰 수 (삭제 예정)
-zm_spawn = 4
-zs_spawn = 1
-zm_spawn_startval = zm_spawn
-zs_spawn_startval = zs_spawn
-zm_spawncount = zm_spawn
-zs_spawncount = zs_spawn
-    #남은 좀비 수 (삭제 예정)
-Z_left = 0
-    #웨이브 (wave 빼고 삭제 예정)
-wave = 0
-wave_time = 0
-wave_killzombie = 0
-wave_fontalpha = 255
-between_wave = 60
-wave_fontdraw = False
+    #웨이브
+wave_count = 0
     #수류탄 (have빼고 삭제 예정)
 special_weapon_click = 1
 special_weapon_availabletime = 0
@@ -348,18 +331,18 @@ class Bullet:
 #칼
 class Knife:
     def __init__(self):
-        global knife_atteck_term, knife_atteck_timelong
         self.img = load_img(assets,'knife_hitbox.png').convert_alpha()
         self.width, self.height = self.img.get_size()
         self.cooltime = 0
         self.cooltime_init = 120
         self.AtteckingTime_init = 10
         self.AtteckingTime = 0
+        self.increase_size = 0
 
     def Atteck(self):
-        global score,knife_increase_size,between_wave
+        global score
         self.img = pg.transform.scale(self.img,\
-                (self.width+knife_increase_size,self.height+knife_increase_size))
+                (self.width+self.increase_size,self.height+self.increase_size))
         #공격, 히트박스 위치 설정
         if self.cooltime > 0:
             self.cooltime -= 1
@@ -371,10 +354,10 @@ class Knife:
         if self.AtteckingTime > 0:
             self.AtteckingTime -= 1
             self.angle = math.atan2(mouse_y-player.centery, mouse_x-player.centerx)
-            self.x = (50+knife_increase_size)*math.cos(self.angle) \
-                                                + player.centerx -(self.width+knife_increase_size)/2
-            self.y = (50+knife_increase_size)*math.sin(self.angle) \
-                                                + player.centery -(self.height+knife_increase_size)/2        
+            self.x = (50+self.increase_size)*math.cos(self.angle) \
+                                                + player.centerx -(self.width+self.increase_size)/2
+            self.y = (50+self.increase_size)*math.sin(self.angle) \
+                                                + player.centery -(self.height+self.increase_size)/2        
         #데미지 줌
             self.rect = self.img.get_rect()
             self.rect.topleft = (self.x,self.y)
@@ -491,7 +474,7 @@ class Bomb:
             ed[3] -= 1        
     
     def damage(self,zm,zs):
-        global Z_left, score  
+        global score  
         for e in self.explode_draw:
             self.rect.topleft = e[0],e[1]
             for m in zm.list:
@@ -537,8 +520,7 @@ class Zombie_melee:
         self.ph_sound = False
 
     def spawn(self):
-        global zm_spawncount,zm_spawn
-        if zm_spawncount//1 > 0:
+        if wave.zm_spawncount//1 > 0:
             if self.spawntime <= 0:
                 first_random = random.randint(1,4)
                 if first_random == 1:
@@ -562,15 +544,16 @@ class Zombie_melee:
                                     self.crash_player_time,random.choice([True,False]),0,0,0])
                                 # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] crash_player_time[6]
                                     #Lflip?:[7] HealthText_set:[8] HealthText_x,y:[9],[10] 
-                self.spawntime = 1000//zm_spawn
-                zm_spawncount -= 1*fps_proportion
+                self.spawntime = 1000//wave.zm_spawn
+                wave.zm_spawncount -= 1*fps_proportion
                 
                 #만약 무한모드라면
                 '''zm_count += 1'''
         self.spawntime -= 1
 
     def Atteck_Die(self):
-        global score, wave_killzombie,Z_left,zombie_blood_list
+        global score,zombie_blood_list
+
         for Zmp in self.list:
             #atteck
             Zmp_rect = self.img.get_rect()
@@ -590,8 +573,8 @@ class Zombie_melee:
             #die
             if Zmp[5] <= 0:
                 score += 100
-                wave_killzombie += 1
-                Z_left -= 1
+                wave.killzombie += 1
+                wave.Z_left -= 1
                 zombie_blood.list.append([Zmp[0]-(zombie_blood.width-self.width)/2,Zmp[1]+25,zombie_blood.ShowingTime])
                 blood_splash.spawn(Zmp[0],Zmp[1],7,1.7,(255,0,0))
                 lastzombie_effect.spawn(middle(Zmp[0],self.width,0),middle(Zmp[1],self.height,0),10,0.35,lastzombie_effect.color)
@@ -634,7 +617,7 @@ class Zombie_melee:
     def sound(self,volume_die,volume_ph,volume_LastZombie):
         if self.die:
             Sound(assets,'zombie_die_sound.wav',volume_die)
-            if Z_left == 0:
+            if wave.Z_left == 0:
                 lastzombie_effect.sound(volume_LastZombie)
             self.die = False
             
@@ -677,8 +660,7 @@ class Zombie_shoot:
         self.ph_sound = False
 
     def spawn(self):
-        global zs_spawncount,zs_spawn
-        if zs_spawncount//1 >0:
+        if wave.zs_spawncount//1 >0:
             if self.spawntime <= 0:
                 first_random = random.randint(1,4)
                 if first_random == 1:
@@ -700,14 +682,14 @@ class Zombie_shoot:
                 self.dy = 0
                 self.list.append([self.x,self.y,self.dx,self.dy,self.angle,self.health,self.bullet,self.shooting_time,self.crash])
                                 # x:[0] y:[1] dx:[2] dy[3] angle[4] health[5] bullet[6] shooting_time[7] crash[8]
-                self.spawntime = 1000//zs_spawn
-                zs_spawncount -= 1*fps_proportion                
+                self.spawntime = 1000//wave.zs_spawn
+                wave.zs_spawncount -= 1*fps_proportion                
                 #만약 무한모드라면
                 '''zs_count += 1'''
         self.spawntime -= 1
 
     def Basic(self):
-        global score, wave_killzombie,Z_left
+        global score, wave_killzombie
         for Zs in self.list:
             #move 
             if not 100 <= Zs[0] <= screen_width-100 - self.width or \
@@ -729,8 +711,8 @@ class Zombie_shoot:
             #die
             if Zs[5] <= 0:
                 score += 100
-                wave_killzombie += 1
-                Z_left -= 1
+                wave.killzombie += 1
+                wave.Z_left -= 1
                 zombie_blood.list.append([Zs[0]-(zombie_blood.width-self.width)/2,Zs[1]+25,zombie_blood.ShowingTime])
                 blood_splash.spawn(Zs[0],Zs[1],7,1.7,(255,0,0))
                 lastzombie_effect.spawn(middle(Zs[0],self.width,0),middle(Zs[1],self.height,0),10,0.35,lastzombie_effect.color)
@@ -780,7 +762,7 @@ class Zombie_shoot:
                 Sound(assets,'zombie_bullet_sound.wav',volume_bullet)
         if self.die:
             Sound(assets,'zombie_die_sound.wav',volume_die)
-            if Z_left == 0:
+            if wave.Z_left == 0:
                 lastzombie_effect.sound(volume_LastZombie)
             self.die = False
         if self.ph_sound:
@@ -906,7 +888,7 @@ class LastZombie_Effect:
         웨이브에서 마지막 좀비일 때 스폰
             (``if문 내장``)
         """
-        if Z_left == 0:
+        if wave.Z_left == 0:
             size = 0
             self.object.append([x,y,size,speed,increase_speed,color])
                             #x:[0], y:[1], size[2], speed[3], increase_speed[4], color[5]
@@ -1170,16 +1152,16 @@ class UI:
         screen.blit(text_bomb, (middle(ph_ui.board_x+ph_ui.board_width,\
                     screen_width-(ph_ui.board_x+ph_ui.board_width),text_bomb.get_size()[0]),90))
         #웨이브
-        text_wave = text_set(gamefont, 30, False, True,f"{self.T_wave[lg]} : {wave}", True, set_color)
+        text_wave = text_set(gamefont, 30, False, True,f"{self.T_wave[lg]} : {wave_count}", True, set_color)
         screen.blit(text_wave, (180,30))
         #점수
         text_score = text_set(gamefont, 30, False, True,f"{self.T_score[lg]} : {score}", True, (243, 240, 108))
         screen.blit(text_score, (180,80))
         #웨이브 시간
-        text_wavetime = text_set(gamefont, 20, False, False,f"{self.T_WaveTime[lg]} {wave_time//60}", True, (255,255,255))
+        text_wavetime = text_set(gamefont, 20, False, False,f"{self.T_WaveTime[lg]} {wave.time//60}", True, (255,255,255))
         screen.blit(text_wavetime, (screen_width/2-(text_wavetime.get_rect())[2]/2,20))
         #남은 좀비 수
-        text_zombie_left = text_set(gamefont, 18, False, False, f"{int(Z_left)} {self.T_ZombieLeft[lg]}", True, (71,200,62))
+        text_zombie_left = text_set(gamefont, 18, False, False, f"{int(wave.Z_left)} {self.T_ZombieLeft[lg]}", True, (71,200,62))
         screen.blit(text_zombie_left, (screen_width/2-(text_zombie_left.get_rect())[2]/2,110))
 
 #게임
@@ -1246,62 +1228,83 @@ def Game():
             pause.draw()
 
 #웨이브
-def Wave(volume):
-    global wave, wave_time, wave_killzombie, wave_fontalpha, zm_spawn, zs_spawn, zm_spawncount, zs_spawncount\
-        ,zombie_melee_spawntime, zombie_shoot_spawntime, Z_left,zombie_melee_spawntime,zombie_shoot_spawntime\
-        , zm_spawn_startval, zs_spawn_startval, between_wave, wave_fontdraw
+class Wave:
+    def __init__(self):
+        #스폰 수
+        self.zm_spawn = 3
+        self.zs_spawn = 0
+        self.zm_spawn_startval = self.zm_spawn
+        self.zs_spawn_startval = self.zs_spawn
+        self.zm_spawncount = self.zm_spawn
+        self.zs_spawncount = self.zs_spawn
+        #남은 좀비 수
+        self.Z_left = 0
+        #웨이브
+        self.time = 0
+        self.killzombie = 0
+        self.fontalpha = 255
+        self.fontdraw = False
+        #카드 나오는 시간
+        self.WaitForCard = 60
 
-    if wave_time == 0 or Z_left == 0:
-        if between_wave > 0:
-            if wave == 0:
-                zombie_melee.list.clear()
-                zombie_shoot.list.clear()
-                zombie_shoot.bullet.clear()
-            between_wave -= 1
+    def SetWave(self):
+        global wave_count
+
+        wave_count += 1
+        self.WaitForCard = 60
+        self.fontdraw = True
+        self.time = 3600
+        self.fontalpha = 230
+        self.killzombie = 0
+
+        self.zm_spawn = self.zm_spawn_startval + 1.3*wave_count
+        self.zs_spawn = self.zs_spawn_startval + 0.55*wave_count
+        self.zm_spawncount = self.zm_spawn
+        self.zs_spawncount = self.zs_spawn
+
+        self.Z_left += self.zm_spawn//1 + self.zs_spawn//1
+
+        zombie_melee.spawntime = 1000//self.zm_spawn
+        zombie_shoot.spawntime = 1000//self.zs_spawn
+
+        upgrade.card_count = random.randint(2,3)
+        upgrade.card_appear = True
+
+    def sound(self,volume):
+        Sound(assets,'wave change.wav',volume)
+
+    def draw(self):
+        global wave_count
+
+        if self.fontalpha > 0 and self.fontdraw:
+            self.fontalpha -= 2.3
+
+            T_ZombieLeft = ["zombies left","좀비 남음"]
+
+            text_wave = text_set('Times new Roman',150, True, False,f"WAVE {wave_count}", True, set_color)
+            text_ZombieLeft = text_set(gamefont,30, False, True,f"{int(self.Z_left)} {T_ZombieLeft[lg]}", True, (213,213,213))
+            text_wave.set_alpha(self.fontalpha)
+            text_ZombieLeft.set_alpha(self.fontalpha)
+            screen.blit(text_wave,(middle(0,screen_width,text_wave.get_size()[0]),\
+                        middle(0,screen_height+UIbar_height,text_wave.get_size()[1])))
+            screen.blit(text_ZombieLeft,(middle(0,screen_width,text_ZombieLeft.get_size()[0]),\
+                        middle(0,screen_height+UIbar_height,text_ZombieLeft.get_size()[1]-200)))
         else:
-            if Upgrading == False:
-                wave += 1
-                between_wave = 60
-                wave_fontdraw = True
-                wave_time = 3600
-                wave_fontalpha = 230
-                wave_killzombie = 0
+            self.fontdraw = False
 
-                zm_spawn = zm_spawn_startval + 1.3*wave
-                zs_spawn = zs_spawn_startval + 0.55*wave
-                zm_spawncount = zm_spawn
-                zs_spawncount = zs_spawn
-
-                Z_left += zm_spawn//1 + zs_spawn//1
-
-                zombie_melee.spawntime = 1000//zm_spawn
-                zombie_shoot.spawntime = 1000//zs_spawn
-
-                upgrade.card_count = random.randint(2,3)
-                upgrade.card_appear = True
-
-                #사운드
-                Sound(assets,'wave change.wav',volume)
-
-    if wave_fontalpha > 0 and wave_fontdraw:
-        wave_fontalpha -= 2.3
-
-        T_ZombieLeft = ["zombies left","좀비 남음"]
-
-        #웨이브 알림
-        text_wave = text_set('Times new Roman',150, True, False,f"WAVE {wave}", True, set_color)
-        text_ZombieLeft = text_set(gamefont,30, False, True,f"{int(Z_left)} {T_ZombieLeft[lg]}", True, (213,213,213))
-        text_wave.set_alpha(wave_fontalpha)
-        text_ZombieLeft.set_alpha(wave_fontalpha)
-        screen.blit(text_wave,(middle(0,screen_width,text_wave.get_size()[0]),\
-                    middle(0,screen_height+UIbar_height,text_wave.get_size()[1])))
-        screen.blit(text_ZombieLeft,(middle(0,screen_width,text_ZombieLeft.get_size()[0]),\
-                    middle(0,screen_height+UIbar_height,text_ZombieLeft.get_size()[1]-200)))
-    else:
-        wave_fontdraw = False
-
-    if between_wave > 0 and wave_time > 0:
-        wave_time -= 1
+    def work(self):
+        if self.time == 0 or self.Z_left == 0:
+            if self.WaitForCard > 0:
+                if wave_count == 0:
+                    zombie_melee.list.clear()
+                    zombie_shoot.list.clear()
+                    zombie_shoot.bullet.clear()
+                self.WaitForCard -= 1
+            else:
+                if Upgrading == False:
+                    self.SetWave()
+                    self.sound(set_sound(0.7,volume,volume_max))
+        self.draw()
 
 #업그레이드
 class Upgrade:
@@ -1329,7 +1332,7 @@ class Upgrade:
         self.UpgradeItem_text_alpha = 255
         #랜덤 카드 개수
         self.card_count = random.randint(2,3)
-
+        
     def random(self):
         while not len(self.card) == self.card_count:
             get_random = random.randint(0,7)
@@ -1378,7 +1381,7 @@ class Upgrade:
             cardselect_effect.Upgrade()
             if self.knife_size_level < self.maxlevel:
                 self.knife_size_level += 1
-                knife_increase_size += sc1
+                self.increase_size += sc1
             else:
                 special_weapon_have += 1
         elif sc == 2: #칼 쿨타임 감소
@@ -1481,16 +1484,18 @@ class Upgrade:
             except:pass
     
     def sound(self,volume):
-        if between_wave == 0 and self.card_appear == True:
+        if wave.WaitForCard == 0 and self.card_appear == True:
             card_sound = pg.mixer.Sound(os.path.join(assets,'card_sound.wav'))
             pg.mixer.Sound.set_volume(card_sound, volume)
             card_sound.play()
             self.card_appear = False
 
-    def update(self):
+    def work(self):
         global Upgrading
         #self.UpgradeItem_Text()
-        if between_wave <= 0:
+        self.sound(set_sound(2,volume,volume_max))
+
+        if wave.WaitForCard <= 0:
             Upgrading = True
 
             pg.mouse.set_visible(True) 
@@ -1498,7 +1503,7 @@ class Upgrade:
             self.random()
             self.draw()
 
-        elif between_wave == 1:
+        elif wave.WaitForCard == 1:
             self.UpgradeList()
 
             if self.card_count == 2:
@@ -1514,9 +1519,7 @@ class Upgrade:
 class GameOver:
     def __init__(self):
         self.gameover_sound_play = 0
-        self.save_count = 0
         self.bool = False
-        
         #재시작 버튼
             #박스
         self.rb_box_width,self.rb_box_height = 230,70
@@ -1539,7 +1542,7 @@ class GameOver:
             text_die_message = text_set(gamefont,30,False,True,"더 이상 버티지 못하였습니다...",True,(180,180,180))
             screen.blit(text_die_message,(screen_width/2-(text_die_message.get_rect())[2]/2,UIbar_height+30))
             
-            text_totalwave = text_set(gamefont, 70, False,False,f"wave : {wave}",True,set_color)
+            text_totalwave = text_set(gamefont, 70, False,False,f"wave : {wave_count}",True,set_color)
             screen.blit(text_totalwave, (screen_width/2-(text_totalwave.get_rect())[2]/2,\
                 screen_height/2-(text_totalwave.get_rect())[3]/2+UIbar_height/2-70))
 
@@ -1559,8 +1562,6 @@ class GameOver:
             ResetGame = True
             self.bool = False
             self.gameover_sound_play = 0
-            self.save_count = 0
-            Wave(set_sound(0.7,volume,volume_max))
 
     def sound(self,volume):
         if self.gameover_sound_play <= 2:
@@ -1568,13 +1569,13 @@ class GameOver:
         if self.gameover_sound_play == 2:
             Sound(assets,'player_die_sound.wav',volume)
 
-    def update(self):
+    def work(self):
         pg.mouse.set_visible(True)
-        
-        if self.save_count <= 2:
-            self.save_count += 1
-        if self.save_count == 2:
-            SaveScore(wave,score)
+
+        self.draw()
+        self.sound((set_sound(1.7,volume,volume_max)))  
+
+        SaveScore(wave_count,score)
 
 #일시정지 메뉴
 class Pause:
@@ -1664,7 +1665,6 @@ class Pause:
             ResetGame = True
             self.bool = False
             pg.mixer.stop()
-            Wave(set_sound(0.7,volume,volume_max))
         #메인메뉴
         if collide_with_point(mouse_x,mouse_y,self.MainmenuBox_x,self.MainmenuBox_y,self.MainmenuBox_width,self.MainmenuBox_height):    
             ResetGame = True
@@ -1932,8 +1932,10 @@ class Main_Menu:
         if collide_with_point(mouse_x,mouse_y,self.not_c_x,self.not_c_y,self.not_c_width,self.not_c_height):
             webbrowser.open('https://www.instagram.com/jiyong._.06/')
 
-    def update(self):
+    def work(self):
         global score_data
+
+        self.draw()
 
         f_s = open("score data.txt",'rb')
         score_data = list(pickle.load(f_s))
@@ -1946,10 +1948,10 @@ class Main_Menu:
         self.v_text_num = text_set(gamefont,25,False,False,f"{volume}",True,(255,255,255))
 
         #무기 변경 방식에 따른 박스 테두리 유무
-        if change_weapon_type == 0:
+        '''if change_weapon_type == 0:
              pg.draw.rect(screen,(255,255,255),(self.c_box_n_x,self.c_box_nr_y,self.c_box_width,self.c_box_height),3)
         elif change_weapon_type == 1:
-             pg.draw.rect(screen,(255,255,255),(self.c_box_r_x,self.c_box_nr_y,self.c_box_width,self.c_box_height),3)
+             pg.draw.rect(screen,(255,255,255),(self.c_box_r_x,self.c_box_nr_y,self.c_box_width,self.c_box_height),3)'''
 
         #품질에 따른 테두리 유무
         if Graphic == 0:
@@ -1986,6 +1988,7 @@ kc_ui = KnifeCooltime_UI()
 ui = UI()
 pause = Pause()
 gameover = GameOver()
+wave = Wave()
 
 def MainLoopSetting() -> None: #차트 정리용
     """
@@ -2087,26 +2090,17 @@ if __name__ == '__main__':
                 gameover.gameover_sound_play = 0
             else:   
                 gameover.bool = True
-            if gameover.bool == True:
-                gameover.draw()
-                gameover.sound((set_sound(1.7,volume,volume_max)))      
-                gameover.update()        
+            if gameover.bool == True:     
+                gameover.work()        
             if pause.bool == False:               
                 pg.mixer.unpause()
-                Wave(set_sound(0.7,volume,volume_max))  
-                upgrade.sound(set_sound(2,volume,volume_max)) 
-                upgrade.update()
+                wave.work()   
+                upgrade.work()
             else:
                 pg.mixer.pause()
             
         else: #메인 메뉴
-            main_menu.draw()
-            main_menu.update()
-
-        #fps 설정
-        if Upgrading or pause.bool == True:
-            FPS = 30
-        else: FPS = 60
+            main_menu.work()
 
         if ResetGame:
             #점수
@@ -2130,21 +2124,21 @@ if __name__ == '__main__':
             zombie_shoot.list.clear()
             zombie_shoot.bullet.clear()
             #스폰 수
-            zm_spawn = 4
-            zs_spawn = 1
-            zm_spawn_startval = zm_spawn
-            zs_spawn_startval = zs_spawn
-            zm_spawncount = zm_spawn
-            zs_spawncount = zs_spawn
+            wave.zm_spawn = 3
+            wave.zs_spawn = 0
+            wave.zm_spawn_startval = wave.zm_spawn
+            wave.zs_spawn_startval = wave.zs_spawn
+            wave.zm_spawncount = wave.zm_spawn
+            wave.zs_spawncount = wave.zs_spawn
             #남은 좀비 수
-            Z_left = 0
+            wave.Z_left = 0
             #웨이브
-            wave = 0
-            wave_time = 0
-            wave_killzombie = 0
-            wave_fontalpha = 255
-            between_wave = 60
-            wave_fontdraw = False
+            wave_count = 0
+            wave.time = 0
+            wave.killzombie = 0
+            wave.fontalpha = 255
+            wave.WaitForCard = 60
+            wave.fontdraw = False
             #수류탄
             special_weapon_click = 1
             special_weapon_availabletime = 0
@@ -2171,5 +2165,5 @@ if __name__ == '__main__':
             ResetGame = False
         
         pg.display.flip()
-        clock.tick(FPS)
+        clock.tick(60)
     pg.quit()
