@@ -99,54 +99,6 @@ def distinguish_sign(value):
 
     return result
 
-#점수 저장
-def SaveScore(*lastest_score):
-    """
-    *lastest_score : 저장할 점수값을 차례대로 넣는다.
-    """
-    f = open("score data.txt",'rb')
-    score_data = list(pickle.load(f))
-
-    for i in range(len(lastest_score)):
-        if lastest_score[i] > score_data[i]:
-            score_data[i] = lastest_score[i]
-
-    f = open("score data.txt",'wb')
-    pickle.dump(score_data,f)
-
-    f.close()
-
-#설정 저장
-def SaveSetting(*setting_data):
-    f = open("setting data.txt",'wb')
-    pickle.dump(setting_data,f)
-    f.close()
-
-#점수 불러오기
-def LoadScore():
-    #점수값이 있으면 로드, 없으면 0으로 저장
-    try:
-        f = open("score data.txt",'rb')
-        score_data = list(pickle.load(f))
-    except:
-        f = open("score data.txt",'wb')
-        score_data = [0,0]
-        pickle.dump(score_data, f)
-    f.close()
-    return score_data
-
-#설정 불러오기
-def LoadSetting():
-    try:
-        f = open("setting data.txt",'rb')
-        setting_data = list(pickle.load(f))
-    except:
-        f = open("setting data.txt",'wb')
-        setting_data = [5,0,1]
-        pickle.dump(setting_data, f)
-    f.close()
-    return setting_data
-
 def circle_surf(radius, color):
     surf = pg.Surface((int(radius * 2), int(radius * 2)))
     pg.draw.circle(surf, color, (radius, radius),radius)
