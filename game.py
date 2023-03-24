@@ -6,6 +6,7 @@ from 함수 import *
 from 파티클 import *
 from 저장기능 import *
 from 스크린샷 import *
+from 엔딩 import *
 
 change_dir('.')
 
@@ -17,6 +18,7 @@ hitboxFolder = assets+"\\Hitbox"
 effectsFolder = assets+"\\Effects"
 mainmenuFolder = assets+"\\Menu"
 uiFolder = assets+"\\UI"
+fontsFolder = assets+"\\Fonts"
 
 #기본 세팅
 screen_width = 1200
@@ -36,7 +38,7 @@ clock = pg.time.Clock()
 
 pg.init()
  
-done = 1
+isPlaying = 1
 
 #폰트
 gamefont = ['hy견고딕','nanumgothic','gulim']
@@ -76,7 +78,7 @@ ResetGame = False
 FPS = 60
 fps_proportion = 60/FPS
 lg = setting_data["lg"] #language 0:eng 1:kr
-
+isEnding = False
 #음악
 Bgm = pg.mixer.music
 Bgm.load(os.path.join(audioFolder,'bgm.wav'))
@@ -113,7 +115,7 @@ class Player:
         self.x = screen_width/2-self.width/2
         self.y = screen_height/2-self.height/2+UIbar_height
         self.dx, self.dy = 0,0
-        self.max_health = 1
+        self.max_health = 5
         self.health = self.max_health
         self.speed = 2.3
         self.reducedSpeed = self.speed*0.7
@@ -687,7 +689,7 @@ class Zombie_melee:
     def HealthText(self):
         #순서대로 실행 돼야함
         for zm in self.list:
-            zm[8] = text_set(gamefont,15,False,False,'🛡' if zm[5]>1 else '',False,white)
+            zm[8] = sysFontText_set(gamefont,15,False,False,'🛡' if zm[5]>1 else '',False,white)
             text_width,text_height = zm[8].get_size()
             zm[9] = zm[0]
             zm[10] = zm[1]
@@ -1058,53 +1060,6 @@ class CardSelect_Effect:
             self.move(i)
             self.delete(i)
 
-#좀비 충돌
-def Crash_Zombie(zm,zs):
-        a_index, b_index = 0,0
-        for Zm1 in zm.list:
-            for Zm2 in zm.list:
-                if a_index != b_index:
-                    Zm1_rect,Zm2_rect = zm.crashbox.get_rect(), zm.crashbox.get_rect()
-                    Zm1_rect.topleft,Zm2_rect.topleft = (Zm1[0],Zm1[1]), (Zm2[0],Zm2[1])
-                    if Zm1_rect.colliderect(Zm2_rect):
-                        Zm1_angle = math.atan2(Zm1[1]-Zm2[1],Zm1[0]-Zm1[0]) #math.cos또는sin(Zm1_angle)*zm.speed
-
-                        ZombieCrash_RandomMove = random.choice([0,1]) #랜덤 움직임 정하는 값
-
-                        ZombieCrashMove_x = math.cos(Zm1_angle)*zm.speed*2
-                        ZombieCrashMove_y = math.sin(Zm1_angle)*zm.speed*2
-
-                        if math.dist((Zm1[0],Zm1[1]),(player.x , player.y)) \
-                            < math.dist((Zm2[0],Zm2[1]),(player.x , player.y)):
-                            Zm2[2] = -Zm1[2]
-                            Zm2[3] = -Zm1[3]
-                        else:
-                            Zm1[2] = -Zm2[2]
-                            Zm1[3] = -Zm2[3] 
-                b_index += 1
-            b_index = 0
-            a_index += 1 
-        a_index, b_index = 0,0  
-        for Zs1 in zs.list:
-            for Zs2 in zs.list:
-                if a_index != b_index:
-                    Zs1_rect,Zs2_rect = zs.img.get_rect(), zs.img.get_rect()
-                    Zs1_rect.topleft,Zs2_rect.topleft = (Zs1[0],Zs1[1]), (Zs2[0],Zs2[1])
-                    if Zs1_rect.colliderect(Zs2_rect):
-                        Zs1[8],Zs2[8] = True,True
-                        #Zm1_angle = math.atan2(Zs1[1]-Zm2[1],Zs1[0]-Zs1[0]) #math.cos또는sin(Zm1_angle)*zm.speed
-                        if math.dist((Zs1[0],Zs1[1]),(player.x , player.y)) \
-                            < math.dist((Zs2[0],Zs2[1]),(player.x , player.y)):
-                            Zs2[2] = 0
-                            Zs2[3] = 0
-                            Zs1[2] = 0
-                            Zs1[3] = 0                 
-                    else:
-                        Zs1[8],Zs2[8] = False,False
-                b_index += 1
-            b_index = 0
-            a_index += 1 
-
 #시간마다 점수 (현재 사용 안 함)
 def Timegoing():
     global Time,score
@@ -1145,24 +1100,24 @@ class UI:
         '''text_health = text_set(gamefont, 50, False, False,f"{self.T_health[lg]} : {player.health:0.1f}/{max_health}", True, (254, 46, 66))
         screen.blit(text_health, (screen_width/2-(text_health.get_rect())[2]/2,50))'''
         #칼 쿨타임
-        text_k_cooltime = text_set(gamefont, self.T_knife[lg][1], False, True,f"{self.T_knife[lg][0]}", True, (126, 222, 226))
+        text_k_cooltime = sysFontText_set(gamefont, self.T_knife[lg][1], False, True,f"{self.T_knife[lg][0]}", True, (126, 222, 226))
         screen.blit(text_k_cooltime, (middle(ph_ui.board_x+ph_ui.board_width,\
                     screen_width-(ph_ui.board_x+ph_ui.board_width),text_k_cooltime.get_size()[0]),20))
         #수류탄 개수
-        text_bomb = text_set(gamefont, 30, False, True,f"{self.T_grenade[lg]} : {special_weapon_have}", True, (227, 134, 7))
+        text_bomb = sysFontText_set(gamefont, 30, False, True,f"{self.T_grenade[lg]} : {special_weapon_have}", True, (227, 134, 7))
         screen.blit(text_bomb, (middle(ph_ui.board_x+ph_ui.board_width,\
                     screen_width-(ph_ui.board_x+ph_ui.board_width),text_bomb.get_size()[0]),90))
         #웨이브 (원래 색깔 : set_color)
-        text_wave = text_set(gamefont, 30, False, True,f"{self.T_wave[lg]} : {wave.count}", True, (255,255,255))
+        text_wave = sysFontText_set(gamefont, 30, False, True,f"{self.T_wave[lg]} : {wave.count}", True, (255,255,255))
         screen.blit(text_wave, (180,30))
         #점수 (원래 색깔 : 243,240,108)
-        text_score = text_set(gamefont, 30, False, True,f"{self.T_score[lg]} : {score}", True, (255,255,255))
+        text_score = sysFontText_set(gamefont, 30, False, True,f"{self.T_score[lg]} : {score}", True, (255,255,255))
         screen.blit(text_score, (180,80))
         #웨이브 시간
-        text_wavetime = text_set(gamefont, 20, False, False,f"{self.T_WaveTime[lg]} {wave.time//60}", True, (255,255,255))
+        text_wavetime = sysFontText_set(gamefont, 20, False, False,f"{self.T_WaveTime[lg]} {wave.time//60}", True, (255,255,255))
         screen.blit(text_wavetime, (screen_width/2-(text_wavetime.get_rect())[2]/2,20))
         #남은 좀비 수
-        text_zombie_left = text_set(gamefont, 18, False, False, f"{int(wave.Z_left)} {self.T_ZombieLeft[lg]}", True, (71,200,62))
+        text_zombie_left = sysFontText_set(gamefont, 18, False, False, f"{int(wave.Z_left)} {self.T_ZombieLeft[lg]}", True, (71,200,62))
         screen.blit(text_zombie_left, (screen_width/2-(text_zombie_left.get_rect())[2]/2,110))
 
 #게임
@@ -1189,6 +1144,8 @@ def Game():
             press.update(player)
             dash.Update()
             splashParticle.Update()
+            spreadParticle.Update()
+            endingCar.update(player,endingStory,spreadParticle)
             
             #사운드 (wave사운드는 맨 Wave함수와 묶음)
             bullet.sound(set_sound(0.1,volume,volume_max))
@@ -1208,6 +1165,7 @@ def Game():
         player.draw()
         player_hurt.p_draw()
         splashParticle.Draw(screen)
+        spreadParticle.Draw(screen)
         zombie_shoot.Draw()
         zombie_melee.Draw()
         knife.draw()
@@ -1221,20 +1179,39 @@ def Game():
         target_mouse.draw()
 
         player_hurt.s_draw()
+        endingCar.draw(screen)
 
         #일시정지 메뉴
         if pause.bool == True:
             pause.work()
 
+def Ending():
+    pg.draw.rect(screen,(0,0,0),[0,0,screen_width,screen_height+UIbar_height])
+    endingStory.update(lg)
+    endingStory.draw(lg,screen_width,screen_height+UIbar_height)
+
 #메인
+drawingCar = 0
+savingWin = False
 def MainCondition():
-    global setting_data
+    global setting_data, drawingCar, isEnding, savingWin
     loading.update()
 
     if main_menu.bool == False: 
         screen.fill(background_color)
-        Game()
-        #print(player.health)
+        if endingStory.bool == True:
+            isEnding = True
+            drawingCar = 0
+            if savingWin == False:
+                SaveWin()
+                SaveScore(score)
+                savingWin = True
+        else:
+            savingWin = False
+        if isEnding == False:
+            Game()
+        else:
+            Ending()
         if player.health <= 0: 
             gameover.bool = True    
             gameover.work()   
@@ -1244,12 +1221,23 @@ def MainCondition():
         if pause.bool == False:               
             pg.mixer.unpause()
             if gameover.bool == False:
-                wave.work()  
-            if wave.count != 0:
+                wave.bool = True
+                if wave.count == wave.end and wave.Z_left == 0:
+                    wave.bool = False
+                    if drawingCar == 240:
+                        endingCar.add(EndingCar(screen_width,400,700,400,7,volume,volume_max))
+                        drawingCar += 1
+                    else:
+                        drawingCar += 1
+            else:
+                wave.bool = False
+            if wave.bool == True:
+                wave.work() 
+            if wave.count != 0 and wave.count != wave.end:
                 upgrade.work()
         else:
-            pg.mixer.pause()
-            
+            pg.mixer.pause()   
+      
     else:
         main_menu.draw()
         mainMenuParticle.Work(screen)
@@ -1262,6 +1250,8 @@ def MainCondition():
 class Wave:
     def __init__(self):
         self.count = 0
+        self.end = 1
+        self.bool = False
         #스폰 수
         self.zm_spawn = 3
         self.zs_spawn = 0
@@ -1310,8 +1300,8 @@ class Wave:
 
             T_ZombieLeft = ["zombies left","좀비 남음"]
 
-            text_wave = text_set('Times new Roman',150, True, False,f"WAVE {wave.count}", True, (117, 175, 0))
-            text_ZombieLeft = text_set(gamefont,30, False, True,f"{int(self.Z_left)} {T_ZombieLeft[lg]}", True, (213,213,213))
+            text_wave = sysFontText_set('Times new Roman',150, True, False,f"WAVE {wave.count}", True, (117, 175, 0))
+            text_ZombieLeft = sysFontText_set(gamefont,30, False, True,f"{int(self.Z_left)} {T_ZombieLeft[lg]}", True, (213,213,213))
             text_wave.set_alpha(self.fontalpha)
             text_ZombieLeft.set_alpha(self.fontalpha)
             screen.blit(text_wave,(middle(0,screen_width,text_wave.get_size()[0]),\
@@ -1477,7 +1467,7 @@ class Upgrade:
 
     def UpgradeItem_Text(self):
         if self.UpgradeItem_text_VisibleTime > 0:
-            text = text_set(gamefont,self.upgrade_list[self.select_card][0][1],False,True,\
+            text = sysFontText_set(gamefont,self.upgrade_list[self.select_card][0][1],False,True,\
                                 self.upgrade_list[self.select_card][0][0],True,(50,216,255))
             text_width,text_height = text.get_size()
 
@@ -1505,18 +1495,18 @@ class Upgrade:
 
         for cd in self.card:
             cd_index = self.card.index(cd)
-            text_ug_des = text_set(gamefont, self.upgrade_list[self.card[cd_index]][0][1], False, False,\
+            text_ug_des = sysFontText_set(gamefont, self.upgrade_list[self.card[cd_index]][0][1], False, False,\
                                     f"{self.upgrade_list[self.card[cd_index]][0][0]}",True,(255,255,255))
             try:
                 middle_font_x = self.pos[cd_index][0]+(self.width-text_ug_des.get_size()[0])/2
                 middle_font_y = self.pos[cd_index][1]+(self.height-text_ug_des.get_size()[1])/2
                 screen.blit(text_ug_des, (middle_font_x,middle_font_y)) 
 
-                text_ug_level = text_set(gamefont, 15, False, False, f"{self.upgrade_list[self.card[cd_index]][1]}", True, (0,216,255))
+                text_ug_level = sysFontText_set(gamefont, 15, False, False, f"{self.upgrade_list[self.card[cd_index]][1]}", True, (0,216,255))
                 screen.blit(text_ug_level, (middle_font_x+(text_ug_des.get_size()[0]-text_ug_level.get_size()[0])/2,middle_font_y+30)) 
                 
                 T_ML = ["+1 grenade when choosing max level card","최고 레벨인 카드를 선택할 시 수류탄 +1"]
-                text_detail_des = text_set(gamefont, 25, False, True, T_ML[lg], True, (166,166,166))
+                text_detail_des = sysFontText_set(gamefont, 25, False, True, T_ML[lg], True, (166,166,166))
                 screen.blit(text_detail_des, ((screen_width-text_detail_des.get_size()[0])/2,500+UIbar_height))    
             except:pass
     
@@ -1569,22 +1559,22 @@ class GameOver:
             pg.draw.rect(screen,(128, 21, 21),(0,0,screen_width,screen_height+UIbar_height),10)
             #text
             t_die = ["It was hard to hold on...","더 이상 버티지 못하였습니다..."]
-            text_die_message = text_set(gamefont,30,False,True,t_die[lg],True,(180,180,180))
+            text_die_message = sysFontText_set(gamefont,30,False,True,t_die[lg],True,(180,180,180))
             screen.blit(text_die_message,(screen_width/2-(text_die_message.get_rect())[2]/2,UIbar_height+30))
             
             t_wave = ["Wave","웨이브"]
-            text_totalwave = text_set(gamefont, 70, False,False,f"{t_wave[lg]} : {wave.count-1}",True,(117, 175, 0))
+            text_totalwave = sysFontText_set(gamefont, 70, False,False,f"{t_wave[lg]} : {wave.count-1}",True,(117, 175, 0))
             screen.blit(text_totalwave, (screen_width/2-(text_totalwave.get_rect())[2]/2,\
                 screen_height/2-(text_totalwave.get_rect())[3]/2+UIbar_height/2-70))
 
             t_score = ["Score","점수"]
-            text_totalscore = text_set(gamefont, 50, False, True,f"{t_score[lg]} : {score}",True, (243, 240, 108))
+            text_totalscore = sysFontText_set(gamefont, 50, False, True,f"{t_score[lg]} : {score}",True, (243, 240, 108))
             screen.blit(text_totalscore, (screen_width/2-(text_totalscore.get_rect())[2]/2,\
                 screen_height/2-(text_totalscore.get_rect())[3]/2+UIbar_height/2+30))      
 
             #재시작 버튼
             t_restart = ["Restart","재시작"]
-            text_restart = text_set(gamefont,30,False,False,t_restart[lg],True,white)
+            text_restart = sysFontText_set(gamefont,30,False,False,t_restart[lg],True,white)
             rb_text_width,rb_text_height = text_restart.get_size()
             rb_text_x = middle(self.rb_box_x,self.rb_box_width,rb_text_width)
             rb_text_y = middle(self.rb_box_y,self.rb_box_height,rb_text_height)
@@ -1613,7 +1603,7 @@ class GameOver:
         self.draw()
         self.sound((set_sound(1.7,volume,volume_max)))  
 
-        SaveScore(wave.count-1,score)
+        SaveScore(score)
 
 #일시정지 메뉴
 class Pause:
@@ -1646,19 +1636,19 @@ class Pause:
         #텍스트 
             #설정,크기
         T_P = ["pause","일시정지"]
-        self.T_pause = text_set(gamefont,25,False,False,T_P[lg],True,self.BoxLine_color)
+        self.T_pause = sysFontText_set(gamefont,25,False,False,T_P[lg],True,self.BoxLine_color)
         self.T_pause_width,self.T_pause_height = self.T_pause.get_size()
 
         T_R = ["restart","재시작"]
-        self.T_Restart = text_set(gamefont,25,False,False,T_R[lg],True,(255,255,255))
+        self.T_Restart = sysFontText_set(gamefont,25,False,False,T_R[lg],True,(255,255,255))
         self.T_Restart_width,self.T_Restart_height = self.T_Restart.get_size()
 
         T_M = ["main menu","메인 메뉴"]
-        self.T_Mainmenu = text_set(gamefont,25,False,False,T_M[lg],True,(255,255,255))
+        self.T_Mainmenu = sysFontText_set(gamefont,25,False,False,T_M[lg],True,(255,255,255))
         self.T_Mainmenu_width,self.T_Mainmenu_height = self.T_Mainmenu.get_size()
         
         T_E = ["press 'ESC' to cancle","ESC로 취소"]
-        self.T_description = text_set(gamefont,25,False,False,T_E[lg],True,(140,140,140))
+        self.T_description = sysFontText_set(gamefont,25,False,False,T_E[lg],True,(140,140,140))
         self.T_description_width,self.T_description_height = self.T_description.get_size()
             #좌표
         self.T_pause_x = middle(self.board_x,self.board_width,self.T_pause_width)
@@ -1734,19 +1724,20 @@ class Main_Menu:
             #이미지 크기
         self.title_width,self.title_height = self.title_img.get_size()
 
-        #최고 점수 (hw:high wave, hs:high score)
-        self.T_HighWave = [("high wave",gamefont), ("최고 웨이브",'hy목각파임b')]
-        self.T_HighScore = [("high score",gamefont), ("최고 점수",'hy목각파임b')]
-        self.hws_space = 100
-            #최고 웨이브
-        self.hw_text = text_set(self.T_HighWave[lg][1],20,False,True,f"{self.T_HighWave[lg][0]} >> {score_data['wave']}",True,(75, 192, 89))
+        #플레이 데이터 (hw:number of wins, hs:high score)
+        self.T_NumberOfWins = [("number of wins"), ("클리어 횟수")]
+        self.T_HighScore = [("high score"), ("최고 점수")]
+        playdata_f = fontsFolder+"\\Hahmlet-Medium.ttf"
+            #클리어 횟수
+        win_data = LoadWin()
+        self.hw_text = fontText_set(playdata_f,20,f"{self.T_NumberOfWins[lg]} >> {win_data['win']}",True,(75, 192, 89))
         self.hw_width,self.hw_height = self.hw_text.get_size()
-        self.hw_x = middle(0,screen_width,self.hw_width)-self.hw_width/2-self.hws_space/2
+        self.hw_x = middle(0,screen_width,self.hw_width)-150
         self.hw_y = 160
             #최고 점수
-        self.hs_text = text_set(self.T_HighScore[lg][1],20,False,True,f"{self.T_HighScore[lg][0]} >> {score_data['score']}",True,(75, 192, 89))
+        self.hs_text = fontText_set(playdata_f,20,f"{self.T_HighScore[lg]} >> {score_data['score']}",True,(75, 192, 89))
         self.hs_width,self.hs_height = self.hs_text.get_size()
-        self.hs_x = middle(0,screen_width,self.hs_width)+self.hw_width/2+self.hws_space/2
+        self.hs_x = middle(0,screen_width,self.hs_width)+150
         self.hs_y = 160
 
         #값 수정 버튼
@@ -1760,21 +1751,21 @@ class Main_Menu:
         #볼륨  (v : volume)
             #설명
         T_volume = ['Volume','음량설정']
-        self.v_text = text_set(gamefont,30,False,False,T_volume[lg],True,gray)
+        self.v_text = sysFontText_set(gamefont,30,False,False,T_volume[lg],True,gray)
         self.v_text_width,self.v_text_height = self.v_text.get_size()
             #설명과 이미지의 거리
-        self.v_space = 30
+        self.v_space = 15
             #설명 좌표
         self.v_text_x = 330
-        self.v_text_y = self.title_height+70
+        self.v_text_y = self.title_height+100
             #이미지 사이의 거리
-        self.v_img_space = 90
+        self.v_img_space = 70
             #이미지 좌표
         self.v_img_x = self.v_text_x + self.v_text_width + self.v_space
         self.v_img_up_y = middle(self.v_text_y,self.v_text_height,self.modify_img_height) - self.v_img_space/2
         self.v_img_down_y = middle(self.v_text_y,self.v_text_height,self.modify_img_height) + self.v_img_space/2
             #음량 값 텍스트
-        self.v_text_num = text_set(gamefont,25,False,False,f"{setting_data['volume']}",True,(255,255,255))
+        self.v_text_num = sysFontText_set(gamefont,25,False,False,f"{setting_data['volume']}",True,(255,255,255))
         self.v_text_num_width,self.v_text_num_height = self.v_text_num.get_size()
             #음량 값 좌표
         self.v_text_num_x = middle(self.v_img_x,self.modify_img_width,self.v_text_num_width)
@@ -1783,7 +1774,7 @@ class Main_Menu:
         #언어 설정
         self.T_language = ["English","한국어"]
         self.language_count = len(self.T_language)
-        self.l_text = text_set(gamefont,25,False,False,self.T_language[lg],True,white)
+        self.l_text = sysFontText_set(gamefont,25,False,False,self.T_language[lg],True,white)
         self.l_text_width,self.l_text_height = self.l_text.get_size()
             #오브젝트끼리의 거리
         self.l_FromImgToBox = 20 #이미지와 박스
@@ -1792,7 +1783,7 @@ class Main_Menu:
             #이미지
         self.l_img = load_img(mainmenuFolder,'change language.png').convert_alpha()
         self.l_img_width,self.l_img_height = self.l_img.get_size()
-        self.l_img_x,self.l_img_y = 600, self.title_height + 60
+        self.l_img_x,self.l_img_y = 600, self.title_height + 90
             #박스
         self.l_box_width, self.l_box_height = 170,50
         self.l_box_x = self.l_img_x + self.l_img_width + self.l_FromImgToBox
@@ -1812,23 +1803,23 @@ class Main_Menu:
             #설정 설명 텍스트,크기
         T_graphic = ['Quality','그래픽 품질']
 
-        self.g_text_s = text_set(gamefont,30,False,False,T_graphic[lg],True,gray)
+        self.g_text_s = sysFontText_set(gamefont,30,False,False,T_graphic[lg],True,gray)
         self.g_text_s_width,self.g_text_s_height = self.g_text_s.get_size()
             #박스 크기
         self.g_box_width,self.g_box_height = 170,50
             #설정 텍스트(저품질),크기
         T_graphic_button = [('low','high'),('저품질','고품질')]
 
-        self.g_text_l = text_set(gamefont,20,False,False,T_graphic_button[lg][0],True,(255,255,255))
+        self.g_text_l = sysFontText_set(gamefont,20,False,False,T_graphic_button[lg][0],True,(255,255,255))
         self.g_text_l_width,self.g_text_l_height = self.g_text_l.get_size()
             #설정 텍스트(고품질),크기
-        self.g_text_h = text_set(gamefont,20,False,False,T_graphic_button[lg][1],True,(255,255,255))
+        self.g_text_h = sysFontText_set(gamefont,20,False,False,T_graphic_button[lg][1],True,(255,255,255))
         self.g_text_h_width,self.g_text_h_height = self.g_text_h.get_size()
             #개체 사이의 거리
         self.g_space = 30
             #설정 설명 텍스트 좌표
         self.g_text_s_x = (screen_width-self.g_text_s_width-(self.g_space*2)-(self.g_box_width*2))/2
-        self.g_text_s_y = self.title_height+200
+        self.g_text_s_y = self.title_height+230
             #박스 y좌표
         self.g_box_y = self.g_text_s_y+(self.g_text_s_height-self.g_box_height)/2
             #박스(저품질) 좌표
@@ -1847,8 +1838,9 @@ class Main_Menu:
             #설명
         T_start = ['PLAY','플레이']
 
-        self.s_text = text_set(gamefont,40,False,True,T_start[lg],True,(255,255,255))
+        self.s_text = fontText_set(fontsFolder+"\\ROKAF Slab Serif Medium.ttf",40,T_start[lg],True,(255,255,255))
         self.s_text_width,self.s_text_height = self.s_text.get_size()
+
             #설명 좌표
         self.s_text_x = (screen_width -self.s_text_width)/2
         self.s_text_y = self.title_height+400
@@ -1863,7 +1855,7 @@ class Main_Menu:
         self.s_box_long_y = self.s_box_distance_y*2+self.s_text_height
 
         #아직 완성된 게임이 아닙니다.
-        self.not_c_text = text_set(gamefont,20,False,False,'Made by BetweenJandG',True,(255, 160, 54))
+        self.not_c_text = sysFontText_set(gamefont,20,False,False,'Made by BetweenJandG',True,(255, 160, 54))
         self.not_c_width,self.not_c_height = self.not_c_text.get_size()
         self.not_c_x = screen_width-self.not_c_width-10
         self.not_c_y = screen_height+UIbar_height-self.not_c_height-15
@@ -1874,19 +1866,26 @@ class Main_Menu:
         #배경
         #screen.fill((25,25,25))
         screen.blit(self.bg_img,(0,0))
-        screen.blit(AlphaRect(screen_width,screen_height+UIbar_height,(0,0,0),100),(0,0))
+        screen.blit(AlphaRect(screen_width,screen_height+UIbar_height,(0,0,0),200),(0,0))
         #pg.draw.rect(screen,set_color,(0,0,screen_width,screen_height+UIbar_height),5)
 
         #타이틀
         screen.blit(self.title_glow,((screen_width-self.title_width)/2,0))
         screen.blit(self.title_img,((screen_width-self.title_width)/2,0))
 
-        #최고 점수
+        #클리어 횟수
         screen.blit(self.hw_text,(self.hw_x,self.hw_y))
+        #최고 점수
         screen.blit(self.hs_text,(self.hs_x,self.hs_y))
 
         #경계
-        pg.draw.line(screen,(200,200,200),(50,self.title_height),(screen_width-50,self.title_height),5)
+        #pg.draw.line(screen,(200,200,200),(50,self.title_height),(screen_width-50,self.title_height),5)
+        pg.draw.rect(screen,(255,255,255),[230,self.title_height,screen_width-230*2,self.title_height+120],3)
+
+        #"설정" 텍스트
+        text_l = ["Setting","설정"]
+        text_f = fontText_set(fontsFolder+"\\ROKAF Slab Serif Medium.ttf",35,text_l[lg],True,(255,255,255))
+        screen.blit(text_f,(middle(0,screen_width,text_f.get_size()[0]),220))
 
         #볼륨 설정
             #설명
@@ -1921,14 +1920,21 @@ class Main_Menu:
         #시작 버튼
             #밝아짐 효과
         if collide_with_point(mouse_x,mouse_y,self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y):
-            screen.blit(AlphaRect(self.s_box_long_x,self.s_box_long_y,(255, 253, 106),60), (self.s_box_x,self.s_box_y))
+            #screen.blit(AlphaRect(self.s_box_long_x,self.s_box_long_y,(255,255,255),60), (self.s_box_x,self.s_box_y))
+            screen.blit(load_img(mainmenuFolder,"startbutton_effect1.png").convert_alpha(),(self.s_box_x,self.s_box_y))
+            img_width,img_height = load_img(mainmenuFolder,"startbutton_effect2.png").get_size()
+            screen.blit(load_img(mainmenuFolder,"startbutton_effect2.png").convert_alpha(),
+                        (middle(self.s_box_x,self.s_box_long_x,img_width),middle(self.s_box_y,self.s_box_long_y,img_height)))
+            img_width,img_height = None,None
+
             #설명
         screen.blit(self.s_text,(self.s_text_x,self.s_text_y))
             #박스
-        pg.draw.rect(screen,(230, 233, 6),(self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y),3)    
+        pg.draw.rect(screen,(200,200,200),(self.s_box_x,self.s_box_y,self.s_box_long_x,self.s_box_long_y),3)    
 
         #아직 완성된 게임이 아닙니다.
         screen.blit(self.not_c_text,(self.not_c_x,self.not_c_y))
+        screen.blit(load_img(mainmenuFolder,"creator_logo_effect.png").convert_alpha(),(self.not_c_x+40,self.not_c_y-5))
 
     def click(self):
         global volume,volume_max,change_weapon_type,graphic,score_data,lg
@@ -1989,7 +1995,7 @@ class Main_Menu:
         SaveSetting(volume,lg,graphic)
 
         #음량 값
-        self.v_text_num = text_set(gamefont,25,False,False,f"{volume}",True,(255,255,255))
+        self.v_text_num = sysFontText_set(gamefont,25,False,False,f"{volume}",True,(255,255,255))
 
         #품질에 따른 테두리 유무
         if graphic == 0:
@@ -2036,6 +2042,8 @@ dash = Dash()
 splashParticle = SplashParticle()
 spreadParticle = SpreadParticle()
 shadow = Shadow()
+endingCar = pg.sprite.Group()
+endingStory = EndingStory()
 
 def MainLoopSetting() -> None: #차트 정리용
     """
@@ -2044,14 +2052,14 @@ def MainLoopSetting() -> None: #차트 정리용
     """
 
 if __name__ == '__main__':
-    while done:
+    while isPlaying:
         fps_proportion = 60/FPS
         Bgm.set_volume(set_sound(0.7,volume,volume_max))
 
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 SaveSetting(volume,lg,graphic)
-                done = 0
+                isPlaying = 0
             if event.type == pg.KEYDOWN:
                 #움직임
                 if event.key == pg.K_w:
@@ -2088,6 +2096,17 @@ if __name__ == '__main__':
                 #스크린샷
                 if event.key == pg.K_F12:
                     Screenshot(screen)
+
+                #스킵
+                if event.key == K_LSHIFT:
+                    if isEnding == True:
+                        endingStory.bool = False
+                        isEnding = False
+                        ResetGame = True
+                        pg.mixer.stop()
+                        Bgm.play(-1)
+                        main_menu.bool = True
+                        main_menu.__init__()
                 
             if event.type == pg.KEYUP:
                 #움직임
@@ -2182,6 +2201,9 @@ if __name__ == '__main__':
             upgrade.health_level = 0
             upgrade.speed_level = 0
             upgrade.select_card = -1
+            #엔딩
+            endingCar.remove()
+            endingStory.__init__()
             
             ResetGame = False
         
