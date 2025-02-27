@@ -1,3 +1,3 @@
-![image](https://github.com/user-attachments/assets/a89ad4ef-1e0f-4605-a1d9-5cc2e4fe0d28)
+![image](https://github.com/user-attachments/assets/bdb71afe-4dd8-463e-8f29-45cc72a7360e)
 
 Game Link : https://betweenjandg.itch.io/hell-walker
